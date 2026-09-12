@@ -2252,10 +2252,14 @@
     }
 
     // =========================================================================
-    // CẤU HÌNH TỰ ĐỘNG LƯU ĐƠN HÀNG VÀO GOOGLE SHEET
+    // CẤU HÌNH TỰ ĐỘNG LƯU ĐƠN HÀNG VÀO GOOGLE SHEET & BÁO LEAD TELEGRAM
     // =========================================================================
-    // Dán URL Web App sau khi Deploy Google Apps Script vào biến dưới đây:
+    // Cách 1: Dán URL Google Apps Script (tự động lưu Sheet + tự động báo Telegram an toàn)
     const GOOGLE_SHEETS_SCRIPT_URL = ""; 
+
+    // Cách 2: (Tùy chọn) Bắn thông báo trực tiếp đến Telegram Group từ trình duyệt
+    const TELEGRAM_BOT_TOKEN = ""; // Điền Bot Token từ @BotFather (ví dụ: "7123456789:AAHk...")
+    const TELEGRAM_CHAT_ID = "";   // Điền Chat ID của Group Telegram (ví dụ: "-1002345678901")
 
     async function handleFormSubmit(e) {
       e.preventDefault();
@@ -2272,6 +2276,7 @@
       const currentSupplements = document.getElementById('currentSupplements')?.value.trim() || '';
       const shippingAddress = document.getElementById('shippingAddress')?.value.trim() || '';
       const selectedPkg = document.querySelector('input[name="packageSelect"]:checked')?.value || 'Gói Chuẩn Đột Phá (2 hộp)';
+      const timestamp = new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
 
       // 1. Hiển thị trạng thái đang gửi
       if (submitBtn) submitBtn.disabled = true;
@@ -2280,7 +2285,7 @@
 
       // 2. Chuẩn bị dữ liệu gửi lên Google Sheet
       const formData = new FormData();
-      formData.append('timestamp', new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }));
+      formData.append('timestamp', timestamp);
       formData.append('parentName', parentName);
       formData.append('phoneNumber', phone);
       formData.append('childAge', childAge);
@@ -2291,7 +2296,7 @@
       formData.append('packageSelect', selectedPkg);
       formData.append('source', 'Salepage Nano Growth Habit EX');
 
-      // 3. Gửi dữ liệu tới Google Apps Script (nếu đã cấu hình)
+      // 3. Gửi dữ liệu tới Google Apps Script (lưu Sheet và báo Telegram phía Server)
       if (GOOGLE_SHEETS_SCRIPT_URL && GOOGLE_SHEETS_SCRIPT_URL.startsWith('http')) {
         try {
           await fetch(GOOGLE_SHEETS_SCRIPT_URL, {
@@ -2303,11 +2308,39 @@
         } catch (error) {
           console.warn("Lỗi kết nối Google Sheet:", error);
         }
-      } else {
-        console.log("GOOGLE_SHEETS_SCRIPT_URL chưa được thiết lập. Vui lòng xem hướng dẫn trong file HUONG_DAN_GOOGLE_SHEET.md.");
       }
 
-      // 4. Khôi phục nút bấm
+      // 4. Bắn trực tiếp đến Telegram Group từ trình duyệt (nếu cấu hình Token)
+      if (TELEGRAM_BOT_TOKEN && TELEGRAM_CHAT_ID) {
+        try {
+          const teleMsg = `🔔 <b>CÓ ĐƠN HÀNG MỚI - NANO GROWTH HABIT EX!</b>\n`
+            + `━━━━━━━━━━━━━━━━━━\n`
+            + `👤 <b>Phụ huynh:</b> ${parentName}\n`
+            + `📞 <b>Số điện thoại:</b> <code>${phone}</code>\n`
+            + `👶 <b>Tuổi của con:</b> ${childAge}\n`
+            + `📏 <b>Chiều cao:</b> ${childHeight || 'Chưa rõ'} | ⚖️ <b>Cân nặng:</b> ${childWeight || 'Chưa rõ'}\n`
+            + `💊 <b>SP đang dùng:</b> ${currentSupplements || 'Không'}\n`
+            + `📦 <b>Gói lựa chọn:</b> <b>${selectedPkg}</b>\n`
+            + `📍 <b>Địa chỉ:</b> ${shippingAddress || 'Chưa cung cấp'}\n`
+            + `⏰ <b>Thời gian:</b> ${timestamp}\n`
+            + `━━━━━━━━━━━━━━━━━━\n`
+            + `👉 <i>Dược sĩ chuyên môn hãy liên hệ tư vấn ngay!</i>`;
+          
+          fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              chat_id: TELEGRAM_CHAT_ID,
+              text: teleMsg,
+              parse_mode: 'HTML'
+            })
+          }).catch(err => console.warn("Lỗi gửi Telegram:", err));
+        } catch (teleErr) {
+          console.warn("Lỗi chuẩn bị tin nhắn Telegram:", teleErr);
+        }
+      }
+
+      // 5. Khôi phục nút bấm
       if (submitBtn) submitBtn.disabled = false;
       if (submitBtnSpinner) submitBtnSpinner.classList.add('hidden');
       if (submitBtnText) submitBtnText.textContent = "GỬI THÔNG TIN ĐẶT HÀNG & TƯ VẤN NGAY";

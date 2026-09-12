@@ -1,32 +1,23 @@
 /**
  * =========================================================================
- * GOOGLE APPS SCRIPT: TỰ ĐỘNG LƯU ĐƠN HÀNG TỪ SALEPAGE NANO GROWTH HABIT EX
+ * GOOGLE APPS SCRIPT: TỰ ĐỘNG LƯU ĐƠN VÀO SHEET & BÁO LEAD VÀO TELEGRAM GROUP
+ * DỰ ÁN: NANO GROWTH HABIT EX
  * =========================================================================
- * 
- * Hướng dẫn 3 bước cài đặt (chỉ mất 1 phút):
- * 
- * BƯỚC 1: Tạo Google Sheet
- * - Mở https://sheets.new để tạo một trang tính mới.
- * - Đặt tên file: "Đơn Hàng - Nano Growth Habit EX".
- * 
- * BƯỚC 2: Dán mã Script này
- * - Trên menu của Google Sheet, chọn: "Tiện ích mở rộng" (Extensions) -> "Apps Script".
- * - Xóa toàn bộ mã mặc định có sẵn trong file Code.gs.
- * - Dán toàn bộ nội dung của file này vào và nhấn biểu tượng "Lưu" (Ctrl + S).
- * 
- * BƯỚC 3: Triển khai Web App (Deploy)
- * - Nhấn nút "Triển khai" (Deploy) màu xanh ở góc trên bên phải -> chọn "Tùy chọn triển khai mới" (New deployment).
- * - Tại mục bánh răng "Chọn loại", chọn "Ứng dụng web" (Web app).
- * - Cấu hình 3 mục:
- *     + Mô tả: "Nhận đơn hàng Nano Canxi"
- *     + Thực thi dưới dạng (Execute as): "Tôi" (Me - email của bạn)
- *     + Người có quyền truy cập (Who has access): "Bất kỳ ai" (Anyone) <-- BẮT BUỘC để website có thể gửi dữ liệu
- * - Nhấn "Triển khai" (Deploy).
- * - Cấp quyền truy cập nếu Google hỏi (Chọn email của bạn -> Nâng cao / Advanced -> Đi tới dự án / Go to project).
- * - Sao chép đường link "URL ứng dụng web" (có đuôi /exec).
- * - Dán link đó vào dòng `const GOOGLE_SHEETS_SCRIPT_URL = "..."` trong file `index.html`!
  */
 
+// =========================================================================
+// 1. CẤU HÌNH THÔNG BÁO TELEGRAM (ĐIỀN VÀO ĐÂY)
+// =========================================================================
+// Hướng dẫn:
+// 1. Chat với @BotFather trên Telegram để tạo Bot và lấy BOT_TOKEN
+// 2. Thêm Bot vào Group của bạn, phân quyền Admin
+// 3. Lấy CHAT_ID của Group (thường bắt đầu bằng dấu trừ, ví dụ: -1001234567890 hoặc -987654321)
+var TELEGRAM_BOT_TOKEN = ""; // Điền Bot Token của bạn (Ví dụ: "7123456789:AAHk...")
+var TELEGRAM_CHAT_ID = "";   // Điền Chat ID của Group (Ví dụ: "-1002345678901")
+
+// =========================================================================
+// 2. XỬ LÝ NHẬN ĐƠN HÀNG TỪ WEBSITE (POST REQUEST)
+// =========================================================================
 function doPost(e) {
   var lock = LockService.getScriptLock();
   lock.tryLock(10000);
@@ -49,7 +40,6 @@ function doPost(e) {
         "Nguồn Đơn Hàng"
       ]);
       
-      // Định dạng dòng tiêu đề: In đậm, nền vàng kem ấm, chữ nâu cacao, căn giữa
       var headerRange = sheet.getRange(1, 1, 1, 10);
       headerRange.setFontWeight("bold");
       headerRange.setBackground("#FFF2CC");
@@ -58,7 +48,7 @@ function doPost(e) {
       sheet.setFrozenRows(1);
     }
     
-    // Đọc dữ liệu gửi từ website
+    // Đọc dữ liệu gửi từ form website
     var data = e.parameter || {};
     if (e.postData && e.postData.contents) {
       try {
@@ -70,16 +60,14 @@ function doPost(e) {
     }
     
     var timestamp = Utilities.formatDate(new Date(), "Asia/Ho_Chi_Minh", "yyyy-MM-dd HH:mm:ss");
-    var phone = data.phoneNumber || data['phone'] || '';
-    // Thêm ký tự ' trước số điện thoại để giữ số 0 ở đầu
-    if (phone && !phone.toString().startsWith("'")) {
-      phone = "'" + phone;
-    }
+    var phone = (data.phoneNumber || data['phone'] || '').toString();
+    var cleanPhone = phone.replace(/['"]+/g, '');
     
+    // Lưu vào Sheet (thêm ' phía trước để không mất số 0)
     var newRow = [
       timestamp,
       data.parentName || data['name'] || '',
-      phone,
+      "'" + cleanPhone,
       data.childAge || data['age'] || '',
       data.childHeight || data['height'] || '',
       data.childWeight || data['weight'] || '',
@@ -91,13 +79,21 @@ function doPost(e) {
     
     sheet.appendRow(newRow);
     
-    // Căn giữa các cột ngày tháng, số điện thoại, tuổi, chiều cao, cân nặng
     var lastRow = sheet.getLastRow();
     sheet.getRange(lastRow, 1).setHorizontalAlignment("center");
     sheet.getRange(lastRow, 3).setHorizontalAlignment("center");
     sheet.getRange(lastRow, 4).setHorizontalAlignment("center");
     sheet.getRange(lastRow, 5).setHorizontalAlignment("center");
     sheet.getRange(lastRow, 6).setHorizontalAlignment("center");
+    
+    // GỬI THÔNG BÁO TỨC THÌ ĐẾN TELEGRAM GROUP
+    if (TELEGRAM_BOT_TOKEN && TELEGRAM_CHAT_ID) {
+      try {
+        sendTelegramNotification(data, timestamp, cleanPhone);
+      } catch (teleError) {
+        Logger.log("Lỗi gửi Telegram: " + teleError.toString());
+      }
+    }
     
     return ContentService
       .createTextOutput(JSON.stringify({ "status": "success", "row": lastRow }))
@@ -112,8 +108,74 @@ function doPost(e) {
   }
 }
 
+// =========================================================================
+// 3. HÀM GỬI TIN NHẮN ĐẸP MẮT VÀO GROUP TELEGRAM
+// =========================================================================
+function sendTelegramNotification(data, timestamp, phone) {
+  var parentName = data.parentName || data['name'] || 'Khách hàng';
+  var childAge = data.childAge || data['age'] || 'Chưa rõ';
+  var height = data.childHeight || data['height'] || 'Chưa rõ';
+  var weight = data.childWeight || data['weight'] || 'Chưa rõ';
+  var supplements = data.currentSupplements || data['supplements'] || 'Không';
+  var address = data.shippingAddress || data['address'] || 'Chưa cung cấp';
+  var pkg = data.packageSelect || data['package'] || 'Gói chuẩn đột phá (2 hộp)';
+
+  var message = "🔔 <b>CÓ ĐƠN HÀNG MỚI - NANO GROWTH HABIT EX!</b>\n";
+  message += "━━━━━━━━━━━━━━━━━━\n";
+  message += "👤 <b>Phụ huynh:</b> " + parentName + "\n";
+  message += "📞 <b>Số điện thoại:</b> <code>" + phone + "</code>\n";
+  message += "👶 <b>Tuổi của con:</b> " + childAge + "\n";
+  message += "📏 <b>Chiều cao:</b> " + height + " | ⚖️ <b>Cân nặng:</b> " + weight + "\n";
+  message += "💊 <b>SP con đang dùng:</b> " + supplements + "\n";
+  message += "📦 <b>Gói lựa chọn:</b> <b>" + pkg + "</b>\n";
+  message += "📍 <b>Địa chỉ:</b> " + address + "\n";
+  message += "⏰ <b>Thời gian:</b> " + timestamp + "\n";
+  message += "━━━━━━━━━━━━━━━━━━\n";
+  message += "👉 <i>Dược sĩ chuyên môn hãy liên hệ tư vấn ngay!</i>";
+
+  var url = "https://api.telegram.org/bot" + TELEGRAM_BOT_TOKEN + "/sendMessage";
+  var payload = {
+    chat_id: TELEGRAM_CHAT_ID,
+    text: message,
+    parse_mode: "HTML"
+  };
+
+  var options = {
+    method: "post",
+    contentType: "application/json",
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  };
+
+  var response = UrlFetchApp.fetch(url, options);
+  Logger.log("Telegram response: " + response.getContentText());
+}
+
+// =========================================================================
+// 4. HÀM THỬ NGHIỆM GỬI TIN NHẮN TELEGRAM TRONG APPS SCRIPT
+// =========================================================================
+// (Sau khi điền Token & Chat ID, bạn chọn hàm testTelegram và bấm "Chạy / Run" để kiểm tra)
+function testTelegram() {
+  if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
+    Logger.log("Vui lòng điền TELEGRAM_BOT_TOKEN và TELEGRAM_CHAT_ID trước khi kiểm tra!");
+    return;
+  }
+  var dummyData = {
+    parentName: "Nguyễn Thị Mai (Test)",
+    childAge: "11 tuổi",
+    childHeight: "138 cm",
+    childWeight: "32 kg",
+    currentSupplements: "Sữa tươi, canxi nước",
+    shippingAddress: "123 Cầu Giấy, Hà Nội",
+    packageSelect: "Gói Chuẩn Đột Phá (2 hộp)"
+  };
+  var now = Utilities.formatDate(new Date(), "Asia/Ho_Chi_Minh", "yyyy-MM-dd HH:mm:ss");
+  sendTelegramNotification(dummyData, now, "0987654321");
+  Logger.log("Đã gửi tin nhắn test thành công vào Group Telegram!");
+}
+
 function doGet(e) {
   return ContentService
-    .createTextOutput("Google Apps Script Endpoint cho Nano Growth Habit EX đang hoạt động bình thường!")
+    .createTextOutput("Google Apps Script & Telegram Notification Endpoint đang hoạt động bình thường!")
     .setMimeType(ContentService.MimeType.TEXT);
 }
