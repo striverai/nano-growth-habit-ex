@@ -1893,9 +1893,11 @@
             <div class="pt-3">
               <button 
                 type="submit" 
-                class="w-full py-4 px-6 rounded-2xl font-bold text-base sm:text-lg text-white bg-gradient-to-r from-brand-gold-600 via-brand-cacao-800 to-brand-cacao-950 hover:from-brand-gold-700 hover:to-black shadow-xl hover:shadow-gold-glow transition-all transform hover:-translate-y-0.5 border border-brand-gold-400 text-center"
+                id="submitBtn"
+                class="w-full py-4 px-6 rounded-2xl font-bold text-base sm:text-lg text-white bg-gradient-to-r from-brand-gold-600 via-brand-cacao-800 to-brand-cacao-950 hover:from-brand-gold-700 hover:to-black shadow-xl hover:shadow-gold-glow transition-all transform hover:-translate-y-0.5 border border-brand-gold-400 text-center flex items-center justify-center gap-2 cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed"
               >
-                GỬI THÔNG TIN ĐẶT HÀNG & TƯ VẤN NGAY
+                <span id="submitBtnSpinner" class="hidden animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full"></span>
+                <span id="submitBtnText">GỬI THÔNG TIN ĐẶT HÀNG & TƯ VẤN NGAY</span>
               </button>
             </div>
 
@@ -2249,17 +2251,74 @@
       if (packageId === 'goi-3' && radios[2]) radios[2].checked = true;
     }
 
-    // Form Submission Simulation
-    function handleFormSubmit(e) {
+    // =========================================================================
+    // CẤU HÌNH TỰ ĐỘNG LƯU ĐƠN HÀNG VÀO GOOGLE SHEET
+    // =========================================================================
+    // Dán URL Web App sau khi Deploy Google Apps Script vào biến dưới đây:
+    const GOOGLE_SHEETS_SCRIPT_URL = ""; 
+
+    async function handleFormSubmit(e) {
       e.preventDefault();
-      const parentName = document.getElementById('parentName').value;
-      const phone = document.getElementById('phoneNumber').value;
-      const selectedPkg = document.querySelector('input[name="packageSelect"]:checked')?.value || 'Gói chuẩn';
       
+      const submitBtn = document.getElementById('submitBtn');
+      const submitBtnText = document.getElementById('submitBtnText');
+      const submitBtnSpinner = document.getElementById('submitBtnSpinner');
+      
+      const parentName = document.getElementById('parentName')?.value.trim() || '';
+      const phone = document.getElementById('phoneNumber')?.value.trim() || '';
+      const childAge = document.getElementById('childAge')?.value.trim() || '';
+      const childHeight = document.getElementById('childHeight')?.value.trim() || '';
+      const childWeight = document.getElementById('childWeight')?.value.trim() || '';
+      const currentSupplements = document.getElementById('currentSupplements')?.value.trim() || '';
+      const shippingAddress = document.getElementById('shippingAddress')?.value.trim() || '';
+      const selectedPkg = document.querySelector('input[name="packageSelect"]:checked')?.value || 'Gói Chuẩn Đột Phá (2 hộp)';
+
+      // 1. Hiển thị trạng thái đang gửi
+      if (submitBtn) submitBtn.disabled = true;
+      if (submitBtnSpinner) submitBtnSpinner.classList.remove('hidden');
+      if (submitBtnText) submitBtnText.textContent = "ĐANG GỬI THÔNG TIN ĐẾN HỆ THỐNG...";
+
+      // 2. Chuẩn bị dữ liệu gửi lên Google Sheet
+      const formData = new FormData();
+      formData.append('timestamp', new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }));
+      formData.append('parentName', parentName);
+      formData.append('phoneNumber', phone);
+      formData.append('childAge', childAge);
+      formData.append('childHeight', childHeight);
+      formData.append('childWeight', childWeight);
+      formData.append('currentSupplements', currentSupplements);
+      formData.append('shippingAddress', shippingAddress);
+      formData.append('packageSelect', selectedPkg);
+      formData.append('source', 'Salepage Nano Growth Habit EX');
+
+      // 3. Gửi dữ liệu tới Google Apps Script (nếu đã cấu hình)
+      if (GOOGLE_SHEETS_SCRIPT_URL && GOOGLE_SHEETS_SCRIPT_URL.startsWith('http')) {
+        try {
+          await fetch(GOOGLE_SHEETS_SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            body: formData
+          });
+          console.log("Đã gửi đơn hàng thành công vào Google Sheet!");
+        } catch (error) {
+          console.warn("Lỗi kết nối Google Sheet:", error);
+        }
+      } else {
+        console.log("GOOGLE_SHEETS_SCRIPT_URL chưa được thiết lập. Vui lòng xem hướng dẫn trong file HUONG_DAN_GOOGLE_SHEET.md.");
+      }
+
+      // 4. Khôi phục nút bấm
+      if (submitBtn) submitBtn.disabled = false;
+      if (submitBtnSpinner) submitBtnSpinner.classList.add('hidden');
+      if (submitBtnText) submitBtnText.textContent = "GỬI THÔNG TIN ĐẶT HÀNG & TƯ VẤN NGAY";
+
+      // 5. Hiển thị Popup xác nhận đặt hàng thành công
       const modal = document.getElementById('successModal');
       const message = document.getElementById('modalMessage');
-      message.innerHTML = `Cảm ơn phụ huynh <strong>${parentName}</strong> (${phone})!<br/><br/>Hệ thống đã ghi nhận đăng ký <strong>${selectedPkg}</strong>. Dược sĩ Nichiei Asia sẽ liên hệ qua điện thoại để hỗ trợ tư vấn lộ trình tối ưu cho con!`;
-      modal.classList.remove('hidden');
+      if (message) {
+        message.innerHTML = `Cảm ơn phụ huynh <strong>${parentName}</strong> (${phone})!<br/><br/>Hệ thống đã ghi nhận đăng ký <strong>${selectedPkg}</strong> và tự động chuyển đến chuyên viên tư vấn. Dược sĩ Nichiei Asia sẽ liên hệ qua điện thoại sớm nhất để đồng hành cùng lộ trình của con!`;
+      }
+      if (modal) modal.classList.remove('hidden');
       document.getElementById('orderForm').reset();
     }
 
