@@ -12,8 +12,8 @@
 // 1. Chat với @BotFather trên Telegram để tạo Bot và lấy BOT_TOKEN
 // 2. Thêm Bot vào Group của bạn, phân quyền Admin
 // 3. Lấy CHAT_ID của Group (thường bắt đầu bằng dấu trừ, ví dụ: -1001234567890 hoặc -987654321)
-var TELEGRAM_BOT_TOKEN = ""; // Điền Bot Token của bạn (Ví dụ: "7123456789:AAHk...")
-var TELEGRAM_CHAT_ID = "";   // Điền Chat ID của Group (Ví dụ: "-1002345678901")
+var TELEGRAM_BOT_TOKEN = "7966144550:AAEUt6ystZCBFMrZUBXS7lJII6RZjZDNTTY"; // Bot: Huy CEO
+var TELEGRAM_CHAT_ID = "-1004414191458";   // Group: Huy 8
 
 // =========================================================================
 // 2. XỬ LÝ NHẬN ĐƠN HÀNG TỪ WEBSITE (POST REQUEST)
