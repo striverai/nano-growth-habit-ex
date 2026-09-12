@@ -2310,33 +2310,44 @@
         }
       }
 
-      // 4. Bắn trực tiếp đến Telegram Group từ trình duyệt (nếu cấu hình Token)
+      // 4. Bắn trực tiếp đến Telegram Group (Hỗ trợ 100% mọi môi trường kể cả file:// offline và online)
       if (TELEGRAM_BOT_TOKEN && TELEGRAM_CHAT_ID) {
+        function escapeHtml(str) {
+          if (!str) return '';
+          return str.toString()
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;");
+        }
+
+        const teleMsg = `🔔 <b>CÓ ĐƠN HÀNG MỚI - NANO GROWTH HABIT EX!</b>\n`
+          + `━━━━━━━━━━━━━━━━━━\n`
+          + `👤 <b>Phụ huynh:</b> ${escapeHtml(parentName)}\n`
+          + `📞 <b>Số điện thoại:</b> <code>${escapeHtml(phone)}</code>\n`
+          + `👶 <b>Tuổi của con:</b> ${escapeHtml(childAge)}\n`
+          + `📏 <b>Chiều cao:</b> ${escapeHtml(childHeight) || 'Chưa rõ'} | ⚖️ <b>Cân nặng:</b> ${escapeHtml(childWeight) || 'Chưa rõ'}\n`
+          + `💊 <b>SP con đang dùng:</b> ${escapeHtml(currentSupplements) || 'Không'}\n`
+          + `📦 <b>Gói lựa chọn:</b> <b>${escapeHtml(selectedPkg)}</b>\n`
+          + `📍 <b>Địa chỉ:</b> ${escapeHtml(shippingAddress) || 'Chưa cung cấp'}\n`
+          + `⏰ <b>Thời gian:</b> ${timestamp}\n`
+          + `━━━━━━━━━━━━━━━━━━\n`
+          + `👉 <i>Dược sĩ chuyên môn hãy liên hệ tư vấn ngay!</i>`;
+
+        const teleParams = new URLSearchParams({
+          chat_id: TELEGRAM_CHAT_ID,
+          text: teleMsg,
+          parse_mode: 'HTML'
+        });
+        const teleUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage?` + teleParams.toString();
+        
         try {
-          const teleMsg = `🔔 <b>CÓ ĐƠN HÀNG MỚI - NANO GROWTH HABIT EX!</b>\n`
-            + `━━━━━━━━━━━━━━━━━━\n`
-            + `👤 <b>Phụ huynh:</b> ${parentName}\n`
-            + `📞 <b>Số điện thoại:</b> <code>${phone}</code>\n`
-            + `👶 <b>Tuổi của con:</b> ${childAge}\n`
-            + `📏 <b>Chiều cao:</b> ${childHeight || 'Chưa rõ'} | ⚖️ <b>Cân nặng:</b> ${childWeight || 'Chưa rõ'}\n`
-            + `💊 <b>SP đang dùng:</b> ${currentSupplements || 'Không'}\n`
-            + `📦 <b>Gói lựa chọn:</b> <b>${selectedPkg}</b>\n`
-            + `📍 <b>Địa chỉ:</b> ${shippingAddress || 'Chưa cung cấp'}\n`
-            + `⏰ <b>Thời gian:</b> ${timestamp}\n`
-            + `━━━━━━━━━━━━━━━━━━\n`
-            + `👉 <i>Dược sĩ chuyên môn hãy liên hệ tư vấn ngay!</i>`;
-          
-          fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              chat_id: TELEGRAM_CHAT_ID,
-              text: teleMsg,
-              parse_mode: 'HTML'
-            })
-          }).catch(err => console.warn("Lỗi gửi Telegram:", err));
+          const teleResp = await fetch(teleUrl, { method: 'GET' });
+          const teleResult = await teleResp.json();
+          console.log("Kết quả gửi Telegram:", teleResult);
         } catch (teleErr) {
-          console.warn("Lỗi chuẩn bị tin nhắn Telegram:", teleErr);
+          console.warn("Thử gửi qua Image beacon fallback:", teleErr);
+          const imgBeacon = new Image();
+          imgBeacon.src = teleUrl;
         }
       }
 
