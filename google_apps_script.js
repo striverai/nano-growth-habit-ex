@@ -1,23 +1,13 @@
-/**
- * =========================================================================
- * GOOGLE APPS SCRIPT: TỰ ĐỘNG LƯU ĐƠN VÀO SHEET & BÁO LEAD VÀO TELEGRAM GROUP
- * DỰ ÁN: NANO GROWTH HABIT EX
- * =========================================================================
- */
+"""
+=========================================================================
+GOOGLE APPS SCRIPT: TỰ ĐỘNG LƯU KHẢO SÁT & ĐƠN HÀNG VÀO GOOGLE SHEETS
+DỰ ÁN: NANO GROWTH HABIT EX
+=========================================================================
+"""
 
-// =========================================================================
-// 1. CẤU HÌNH THÔNG BÁO TELEGRAM (ĐIỀN VÀO ĐÂY)
-// =========================================================================
-// Hướng dẫn:
-// 1. Chat với @BotFather trên Telegram để tạo Bot và lấy BOT_TOKEN
-// 2. Thêm Bot vào Group của bạn, phân quyền Admin
-// 3. Lấy CHAT_ID của Group (thường bắt đầu bằng dấu trừ, ví dụ: -1001234567890 hoặc -987654321)
 var TELEGRAM_BOT_TOKEN = "7966144550:AAEUt6ystZCBFMrZUBXS7lJII6RZjZDNTTY"; // Bot: Huy CEO
 var TELEGRAM_CHAT_ID = "-1004414191458";   // Group: Huy 8
 
-// =========================================================================
-// 2. XỬ LÝ NHẬN ĐƠN HÀNG TỪ WEBSITE (POST REQUEST)
-// =========================================================================
 function doPost(e) {
   var lock = LockService.getScriptLock();
   lock.tryLock(10000);
@@ -28,15 +18,15 @@ function doPost(e) {
     // Tự động tạo hàng Tiêu đề cột nếu trang tính còn mới
     if (sheet.getLastRow() === 0) {
       sheet.appendRow([
-        "Thời Gian Đặt Hàng",
-        "Họ Tên Phụ Huynh",
-        "Số Điện Thoại",
-        "Tuổi Của Con",
-        "Chiều Cao (cm)",
-        "Cân Nặng (kg)",
-        "Sản Phẩm Đang Dùng",
+        "Thời Gian",
+        "Họ Tên Ba/Mẹ",
+        "Số Điện Thoại / Zalo",
+        "Tuổi & Giới Tính Bé",
+        "Trăn Trở Lớn Nhất",
+        "Mục Tiêu 3-6 Tháng",
+        "Đã Dùng Giải Pháp Gì",
+        "Gói Quan Tâm",
         "Địa Chỉ Nhận Hàng",
-        "Gói Sản Phẩm",
         "Nguồn Đơn Hàng"
       ]);
       
@@ -63,17 +53,17 @@ function doPost(e) {
     var phone = (data.phoneNumber || data['phone'] || '').toString();
     var cleanPhone = phone.replace(/['"]+/g, '');
     
-    // Lưu vào Sheet (thêm ' phía trước để không mất số 0)
+    // Lưu vào Sheet (thêm ' phía trước để không mất số 0 đầu)
     var newRow = [
       timestamp,
       data.parentName || data['name'] || '',
       "'" + cleanPhone,
-      data.childAge || data['age'] || '',
-      data.childHeight || data['height'] || '',
-      data.childWeight || data['weight'] || '',
-      data.currentSupplements || data['supplements'] || '',
+      data.childAgeGender || data.childAge || data['age'] || '',
+      data.growthWorry || data['worry'] || '',
+      data.growthGoal || data['goal'] || '',
+      data.previousSupplements || data.currentSupplements || data['supplements'] || '',
+      data.packageSelect || data['package'] || 'Gói Chuẩn Đột Phá (2 hộp)',
       data.shippingAddress || data['address'] || '',
-      data.packageSelect || data['package'] || '',
       data.source || 'Salepage Nano Growth Habit EX'
     ];
     
@@ -83,8 +73,6 @@ function doPost(e) {
     sheet.getRange(lastRow, 1).setHorizontalAlignment("center");
     sheet.getRange(lastRow, 3).setHorizontalAlignment("center");
     sheet.getRange(lastRow, 4).setHorizontalAlignment("center");
-    sheet.getRange(lastRow, 5).setHorizontalAlignment("center");
-    sheet.getRange(lastRow, 6).setHorizontalAlignment("center");
     
     // GỬI THÔNG BÁO TỨC THÌ ĐẾN TELEGRAM GROUP
     if (TELEGRAM_BOT_TOKEN && TELEGRAM_CHAT_ID) {
@@ -108,30 +96,28 @@ function doPost(e) {
   }
 }
 
-// =========================================================================
-// 3. HÀM GỬI TIN NHẮN ĐẸP MẮT VÀO GROUP TELEGRAM
-// =========================================================================
 function sendTelegramNotification(data, timestamp, phone) {
   var parentName = data.parentName || data['name'] || 'Khách hàng';
-  var childAge = data.childAge || data['age'] || 'Chưa rõ';
-  var height = data.childHeight || data['height'] || 'Chưa rõ';
-  var weight = data.childWeight || data['weight'] || 'Chưa rõ';
-  var supplements = data.currentSupplements || data['supplements'] || 'Không';
+  var childInfo = data.childAgeGender || data.childAge || 'Chưa rõ';
+  var worry = data.growthWorry || 'Chưa rõ';
+  var goal = data.growthGoal || 'Chưa rõ';
+  var supplements = data.previousSupplements || data.currentSupplements || 'Không';
+  var pkg = data.packageSelect || 'Gói chuẩn đột phá (2 hộp)';
   var address = data.shippingAddress || data['address'] || 'Chưa cung cấp';
-  var pkg = data.packageSelect || data['package'] || 'Gói chuẩn đột phá (2 hộp)';
 
-  var message = "🔔 <b>CÓ ĐƠN HÀNG MỚI - NANO GROWTH HABIT EX!</b>\n";
+  var message = "🔔 <b>CÓ KHẢO SÁT & ĐĂNG KÝ TƯ VẤN MỚI - NANO GROWTH!</b>\n";
   message += "━━━━━━━━━━━━━━━━━━\n";
   message += "👤 <b>Phụ huynh:</b> " + parentName + "\n";
-  message += "📞 <b>Số điện thoại:</b> <code>" + phone + "</code>\n";
-  message += "👶 <b>Tuổi của con:</b> " + childAge + "\n";
-  message += "📏 <b>Chiều cao:</b> " + height + " | ⚖️ <b>Cân nặng:</b> " + weight + "\n";
-  message += "💊 <b>SP con đang dùng:</b> " + supplements + "\n";
+  message += "📞 <b>Số điện thoại / Zalo:</b> <code>" + phone + "</code>\n";
+  message += "👶 <b>Tuổi & Giới tính bé:</b> " + childInfo + "\n";
+  message += "⚠️ <b>Trăn trở nhất:</b> " + worry + "\n";
+  message += "🎯 <b>Mục tiêu 3-6 tháng:</b> " + goal + "\n";
+  message += "💊 <b>Đã dùng giải pháp:</b> " + supplements + "\n";
   message += "📦 <b>Gói lựa chọn:</b> <b>" + pkg + "</b>\n";
   message += "📍 <b>Địa chỉ:</b> " + address + "\n";
   message += "⏰ <b>Thời gian:</b> " + timestamp + "\n";
   message += "━━━━━━━━━━━━━━━━━━\n";
-  message += "👉 <i>Dược sĩ chuyên môn hãy liên hệ tư vấn ngay!</i>";
+  message += "👉 <i>Dược sĩ chuyên môn hãy liên hệ tư vấn lộ trình ngay!</i>";
 
   var url = "https://api.telegram.org/bot" + TELEGRAM_BOT_TOKEN + "/sendMessage";
   var payload = {
@@ -147,35 +133,11 @@ function sendTelegramNotification(data, timestamp, phone) {
     muteHttpExceptions: true
   };
 
-  var response = UrlFetchApp.fetch(url, options);
-  Logger.log("Telegram response: " + response.getContentText());
-}
-
-// =========================================================================
-// 4. HÀM THỬ NGHIỆM GỬI TIN NHẮN TELEGRAM TRONG APPS SCRIPT
-// =========================================================================
-// (Sau khi điền Token & Chat ID, bạn chọn hàm testTelegram và bấm "Chạy / Run" để kiểm tra)
-function testTelegram() {
-  if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
-    Logger.log("Vui lòng điền TELEGRAM_BOT_TOKEN và TELEGRAM_CHAT_ID trước khi kiểm tra!");
-    return;
-  }
-  var dummyData = {
-    parentName: "Nguyễn Thị Mai (Test)",
-    childAge: "11 tuổi",
-    childHeight: "138 cm",
-    childWeight: "32 kg",
-    currentSupplements: "Sữa tươi, canxi nước",
-    shippingAddress: "123 Cầu Giấy, Hà Nội",
-    packageSelect: "Gói Chuẩn Đột Phá (2 hộp)"
-  };
-  var now = Utilities.formatDate(new Date(), "Asia/Ho_Chi_Minh", "yyyy-MM-dd HH:mm:ss");
-  sendTelegramNotification(dummyData, now, "0987654321");
-  Logger.log("Đã gửi tin nhắn test thành công vào Group Telegram!");
+  UrlFetchApp.fetch(url, options);
 }
 
 function doGet(e) {
   return ContentService
-    .createTextOutput("Google Apps Script & Telegram Notification Endpoint đang hoạt động bình thường!")
+    .createTextOutput("Google Apps Script Endpoint cho Salepage Nano Growth đang chạy tốt!")
     .setMimeType(ContentService.MimeType.TEXT);
 }

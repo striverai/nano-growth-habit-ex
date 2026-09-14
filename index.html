@@ -1715,141 +1715,172 @@
       </div>
     </section>
 
-    <!-- SECTION 13: FORM ĐĂNG KÝ TƯ VẤN CÁ NHÂN HÓA -->
+        <!-- SECTION 13: FORM KHẢO SÁT & ĐĂNG KÝ TƯ VẤN LỘ TRÌNH CHUẨN NHẬT -->
     <section id="dat-hang" class="py-16 md:py-24 bg-japanese-pattern">
       <div class="max-w-4xl mx-auto px-4 sm:px-6">
         
         <div class="rounded-3xl bg-white border-2 border-brand-gold-400 shadow-2xl p-6 sm:p-10 relative overflow-hidden">
           
           <!-- Top Tag -->
-          <div class="text-center max-w-2xl mx-auto mb-8">
+          <div class="text-center max-w-2xl mx-auto mb-6">
             <span class="inline-block px-3.5 py-1 rounded-full bg-brand-cacao-900 text-brand-gold-400 text-xs font-bold uppercase tracking-wider mb-3">
-              TƯ VẤN CHUYÊN SÂU TỪ DƯỢC SĨ
+              📋 KHẢO SÁT NHANH 30 GIÂY – TƯ VẤN CHUYÊN SÂU
             </span>
             <h2 class="text-2xl sm:text-3xl font-extrabold text-brand-cacao-900 leading-tight">
-              ĐĂNG KÝ NHẬN TƯ VẤN LỘ TRÌNH & ƯU ĐÃI NGAY HÔM NAY
+              KHẢO SÁT TĂNG TRƯỞNG & NHẬN LỘ TRÌNH CHUẨN NHẬT CHO CON
             </h2>
             <p class="text-xs sm:text-sm text-brand-cacao-700 mt-2">
-              Hãy cung cấp độ tuổi, chiều cao, cân nặng và các sản phẩm bé đang dùng để Dược sĩ Nichiei Asia phân tích và tư vấn lộ trình khoa học nhất.
+              Dựa trên độ tuổi, thể trạng và nỗi trăn trở của Ba Mẹ, Dược sĩ Nichiei Asia sẽ phân tích và đưa ra lộ trình dinh dưỡng khoa học nhất.
             </p>
           </div>
 
-          <!-- FORM -->
-          <form id="orderForm" onsubmit="handleFormSubmit(event)" class="space-y-5">
+          <!-- TAB SWITCHER: 2 CHẾ ĐỘ (FORM NATIVE ĐỒNG BỘ GIAO DIỆN & GOOGLE FORM EMBED) -->
+          <div class="flex items-center justify-center p-1.5 rounded-2xl bg-brand-sand border border-brand-gold-300 mb-8 max-w-md mx-auto gap-2">
+            <button 
+              type="button" 
+              id="tabGoogle" 
+              onclick="switchFormTab('google')" 
+              class="flex-1 py-2.5 px-3 rounded-xl font-bold text-xs sm:text-sm bg-brand-cacao-900 text-brand-gold-400 shadow transition-all text-center"
+            >
+              🔗 Biểu Mẫu Google Form (Đang Hiện)
+            </button>
+            <button 
+              type="button" 
+              id="tabNative" 
+              onclick="switchFormTab('native')" 
+              class="flex-1 py-2.5 px-3 rounded-xl font-bold text-xs sm:text-sm bg-white text-brand-cacao-700 hover:bg-brand-ivory border border-brand-gold-300/60 transition-all text-center"
+            >
+              📝 Form Giao Diện Salepage
+            </button>
+          </div>
+
+          <!-- TAB 1: FORM SALEPAGE NATIVE (TỰ ĐỘNG GỬI GOOGLE SHEETS / FORMSPREE / TELEGRAM) -->
+          <form id="orderForm" onsubmit="handleFormSubmit(event)" class="space-y-6 hidden">
             
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <!-- Họ tên phụ huynh -->
-              <div>
-                <label class="block text-xs sm:text-sm font-bold text-brand-cacao-900 mb-1.5" for="parentName">
-                  Họ và tên phụ huynh <span class="text-red-600">*</span>
-                </label>
-                <input 
-                  type="text" 
-                  id="parentName" 
-                  name="parentName" 
-                  required 
-                  placeholder="Ví dụ: Nguyễn Thị Mai" 
-                  class="w-full px-4 py-3 rounded-xl border border-brand-gold-300 focus:outline-none focus:ring-2 focus:ring-brand-gold-500 text-xs sm:text-sm bg-brand-cream/40"
-                />
-              </div>
+            <!-- THÔNG TIN LIÊN HỆ PHỤ HUYNH -->
+            <div class="p-4 sm:p-5 rounded-2xl bg-brand-cream/60 border border-brand-gold-300 space-y-4">
+              <span class="text-xs font-bold uppercase tracking-wider text-brand-gold-800 block">
+                1. Thông tin liên hệ Ba / Mẹ
+              </span>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs sm:text-sm font-bold text-brand-cacao-900 mb-1.5" for="parentName">
+                    Họ và tên Ba/Mẹ <span class="text-red-600">*</span>
+                  </label>
+                  <input 
+                    type="text" 
+                    id="parentName" 
+                    name="parentName" 
+                    required 
+                    placeholder="Ví dụ: Nguyễn Thị Mai" 
+                    class="w-full px-4 py-3 rounded-xl border border-brand-gold-300 focus:outline-none focus:ring-2 focus:ring-brand-gold-500 text-xs sm:text-sm bg-white"
+                  />
+                </div>
 
-              <!-- Số điện thoại -->
-              <div>
-                <label class="block text-xs sm:text-sm font-bold text-brand-cacao-900 mb-1.5" for="phoneNumber">
-                  Số điện thoại nhận tư vấn / nhận hàng <span class="text-red-600">*</span>
-                </label>
-                <input 
-                  type="tel" 
-                  id="phoneNumber" 
-                  name="phoneNumber" 
-                  required 
-                  placeholder="Ví dụ: 0987 654 321" 
-                  class="w-full px-4 py-3 rounded-xl border border-brand-gold-300 focus:outline-none focus:ring-2 focus:ring-brand-gold-500 text-xs sm:text-sm bg-brand-cream/40"
-                />
-              </div>
-            </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <!-- Tuổi của con -->
-              <div>
-                <label class="block text-xs sm:text-sm font-bold text-brand-cacao-900 mb-1.5" for="childAge">
-                  Tuổi của con hiện tại <span class="text-red-600">*</span>
-                </label>
-                <input 
-                  type="text" 
-                  id="childAge" 
-                  name="childAge" 
-                  required 
-                  placeholder="Ví dụ: 11 tuổi" 
-                  class="w-full px-4 py-3 rounded-xl border border-brand-gold-300 focus:outline-none focus:ring-2 focus:ring-brand-gold-500 text-xs sm:text-sm bg-brand-cream/40"
-                />
-              </div>
-
-              <!-- Chiều cao hiện tại -->
-              <div>
-                <label class="block text-xs sm:text-sm font-bold text-brand-cacao-900 mb-1.5" for="childHeight">
-                  Chiều cao hiện tại của con
-                </label>
-                <input 
-                  type="text" 
-                  id="childHeight" 
-                  name="childHeight" 
-                  placeholder="Ví dụ: 138 cm" 
-                  class="w-full px-4 py-3 rounded-xl border border-brand-gold-300 focus:outline-none focus:ring-2 focus:ring-brand-gold-500 text-xs sm:text-sm bg-brand-cream/40"
-                />
-              </div>
-
-              <!-- Cân nặng hiện tại -->
-              <div>
-                <label class="block text-xs sm:text-sm font-bold text-brand-cacao-900 mb-1.5" for="childWeight">
-                  Cân nặng hiện tại của con
-                </label>
-                <input 
-                  type="text" 
-                  id="childWeight" 
-                  name="childWeight" 
-                  placeholder="Ví dụ: 32 kg" 
-                  class="w-full px-4 py-3 rounded-xl border border-brand-gold-300 focus:outline-none focus:ring-2 focus:ring-brand-gold-500 text-xs sm:text-sm bg-brand-cream/40"
-                />
+                <div>
+                  <label class="block text-xs sm:text-sm font-bold text-brand-cacao-900 mb-1.5" for="phoneNumber">
+                    Số điện thoại / Zalo <span class="text-red-600">*</span>
+                  </label>
+                  <input 
+                    type="tel" 
+                    id="phoneNumber" 
+                    name="phoneNumber" 
+                    required 
+                    placeholder="Ví dụ: 0987 654 321" 
+                    class="w-full px-4 py-3 rounded-xl border border-brand-gold-300 focus:outline-none focus:ring-2 focus:ring-brand-gold-500 text-xs sm:text-sm bg-white"
+                  />
+                </div>
               </div>
             </div>
 
-            <!-- Sản phẩm bổ sung đang dùng -->
-            <div>
-              <label class="block text-xs sm:text-sm font-bold text-brand-cacao-900 mb-1.5" for="currentSupplements">
-                Sản phẩm bổ sung con đang sử dụng (sữa, canxi, vitamin, DHA...)
+            <!-- CÂU HỎI 1: TUỔI VÀ GIỚI TÍNH CỦA BÉ -->
+            <div class="p-4 sm:p-5 rounded-2xl bg-white border border-brand-gold-300 shadow-sm space-y-2">
+              <label class="block text-xs sm:text-sm font-bold text-brand-cacao-900" for="childAgeGender">
+                Câu 1: Bé nhà mình hiện mấy tuổi, là bé trai hay bé gái? <span class="text-red-600">*</span>
               </label>
               <input 
                 type="text" 
-                id="currentSupplements" 
-                name="currentSupplements" 
-                placeholder="Ví dụ: Sữa tươi, đang uống canxi dạng nước..." 
-                class="w-full px-4 py-3 rounded-xl border border-brand-gold-300 focus:outline-none focus:ring-2 focus:ring-brand-gold-500 text-xs sm:text-sm bg-brand-cream/40"
+                id="childAgeGender" 
+                name="childAgeGender" 
+                required 
+                placeholder="Ví dụ: Bé trai 8 tuổi (hoặc Bé gái 12 tuổi)..." 
+                class="w-full px-4 py-3 rounded-xl border border-brand-gold-300 focus:outline-none focus:ring-2 focus:ring-brand-gold-500 text-xs sm:text-sm bg-brand-cream/30"
               />
             </div>
 
-            <!-- Địa chỉ nhận hàng -->
-            <div>
-              <label class="block text-xs sm:text-sm font-bold text-brand-cacao-900 mb-1.5" for="shippingAddress">
-                Địa chỉ nhận hàng (Tỉnh/Thành – Quận/Huyện – Số nhà...)
-              </label>
-              <input 
-                type="text" 
-                id="shippingAddress" 
-                name="shippingAddress" 
-                placeholder="Nhập địa chỉ giao nhận hàng..." 
-                class="w-full px-4 py-3 rounded-xl border border-brand-gold-300 focus:outline-none focus:ring-2 focus:ring-brand-gold-500 text-xs sm:text-sm bg-brand-cream/40"
-              />
+            <!-- CÂU HỎI 2: ĐIỀU TRĂN TRỞ NHẤT -->
+            <div class="p-4 sm:p-5 rounded-2xl bg-white border border-brand-gold-300 shadow-sm space-y-2.5">
+              <span class="block text-xs sm:text-sm font-bold text-brand-cacao-900">
+                Câu 2: Điều gì khiến Ba/Mẹ trăn trở nhất về sự phát triển của con hiện nay? <span class="text-red-600">*</span>
+              </span>
+              <div class="space-y-2 text-xs sm:text-sm">
+                <label class="flex items-center gap-3 p-3 rounded-xl border border-brand-sand hover:border-brand-gold-400 bg-brand-cream/30 cursor-pointer transition-colors has-[:checked]:border-brand-gold-600 has-[:checked]:bg-brand-ivory font-medium">
+                  <input type="radio" name="growthWorry" value="Con thấp hơn các bạn cùng lứa, sợ con bị lùn" checked class="w-4 h-4 text-brand-gold-600 focus:ring-brand-gold-500" />
+                  <span>Con thấp hơn các bạn cùng lứa, sợ con bị lùn</span>
+                </label>
+                <label class="flex items-center gap-3 p-3 rounded-xl border border-brand-sand hover:border-brand-gold-400 bg-brand-cream/30 cursor-pointer transition-colors has-[:checked]:border-brand-gold-600 has-[:checked]:bg-brand-ivory font-medium">
+                  <input type="radio" name="growthWorry" value="Con lười ăn, hấp thu kém, người gầy gò" class="w-4 h-4 text-brand-gold-600 focus:ring-brand-gold-500" />
+                  <span>Con lười ăn, hấp thu kém, người gầy gò</span>
+                </label>
+                <label class="flex items-center gap-3 p-3 rounded-xl border border-brand-sand hover:border-brand-gold-400 bg-brand-cream/30 cursor-pointer transition-colors has-[:checked]:border-brand-gold-600 has-[:checked]:bg-brand-ivory font-medium">
+                  <input type="radio" name="growthWorry" value="Con hay ốm vặt, sức đề kháng kém" class="w-4 h-4 text-brand-gold-600 focus:ring-brand-gold-500" />
+                  <span>Con hay ốm vặt, sức đề kháng kém</span>
+                </label>
+                <label class="flex items-center gap-3 p-3 rounded-xl border border-brand-sand hover:border-brand-gold-400 bg-brand-cream/30 cursor-pointer transition-colors has-[:checked]:border-brand-gold-600 has-[:checked]:bg-brand-ivory font-medium">
+                  <input type="radio" name="growthWorry" value="Con sắp bước qua giai đoạn vàng tăng chiều cao (tiền dậy thì / dậy thì)" class="w-4 h-4 text-brand-gold-600 focus:ring-brand-gold-500" />
+                  <span>Con sắp bước qua "giai đoạn vàng" tăng chiều cao (tiền dậy thì / dậy thì)</span>
+                </label>
+              </div>
             </div>
 
-            <!-- CHỌN GÓI SẢN PHẨM (RADIO TIÊU CHUẨN DOCX) -->
-            <div class="pt-2">
-              <label class="block text-xs sm:text-sm font-bold text-brand-cacao-900 mb-2">
-                Chọn gói sản phẩm bạn quan tâm:
-              </label>
-              
+            <!-- CÂU HỎI 3: MỤC TIÊU CẢI THIỆN -->
+            <div class="p-4 sm:p-5 rounded-2xl bg-white border border-brand-gold-300 shadow-sm space-y-2.5">
+              <span class="block text-xs sm:text-sm font-bold text-brand-cacao-900">
+                Câu 3: Ba/Mẹ mong muốn con cải thiện điều gì nhất trong 3 - 6 tháng tới? <span class="text-red-600">*</span>
+              </span>
+              <div class="space-y-2 text-xs sm:text-sm">
+                <label class="flex items-center gap-3 p-3 rounded-xl border border-brand-sand hover:border-brand-gold-400 bg-brand-cream/30 cursor-pointer transition-colors has-[:checked]:border-brand-gold-600 has-[:checked]:bg-brand-ivory font-medium">
+                  <input type="radio" name="growthGoal" value="Tăng chiều cao rõ rệt (3 - 5 cm)" checked class="w-4 h-4 text-brand-gold-600 focus:ring-brand-gold-500" />
+                  <span>Tăng chiều cao rõ rệt (3 - 5 cm)</span>
+                </label>
+                <label class="flex items-center gap-3 p-3 rounded-xl border border-brand-sand hover:border-brand-gold-400 bg-brand-cream/30 cursor-pointer transition-colors has-[:checked]:border-brand-gold-600 has-[:checked]:bg-brand-ivory font-medium">
+                  <input type="radio" name="growthGoal" value="Ăn ngon miệng, tiêu hóa tốt, tăng cân đều" class="w-4 h-4 text-brand-gold-600 focus:ring-brand-gold-500" />
+                  <span>Ăn ngon miệng, tiêu hóa tốt, tăng cân đều</span>
+                </label>
+                <label class="flex items-center gap-3 p-3 rounded-xl border border-brand-sand hover:border-brand-gold-400 bg-brand-cream/30 cursor-pointer transition-colors has-[:checked]:border-brand-gold-600 has-[:checked]:bg-brand-ivory font-medium">
+                  <input type="radio" name="growthGoal" value="Phát triển toàn diện, cơ thể săn chắc, khỏe mạnh" class="w-4 h-4 text-brand-gold-600 focus:ring-brand-gold-500" />
+                  <span>Phát triển toàn diện, cơ thể săn chắc, khỏe mạnh</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- CÂU HỎI 4: KINH NGHIỆM ĐÃ DÙNG GIẢI PHÁP -->
+            <div class="p-4 sm:p-5 rounded-2xl bg-white border border-brand-gold-300 shadow-sm space-y-2.5">
+              <span class="block text-xs sm:text-sm font-bold text-brand-cacao-900">
+                Câu 4: Ba/Mẹ đã từng cho con dùng giải pháp tăng trưởng nào chưa? <span class="text-red-600">*</span>
+              </span>
+              <div class="space-y-2 text-xs sm:text-sm">
+                <label class="flex items-center gap-3 p-3 rounded-xl border border-brand-sand hover:border-brand-gold-400 bg-brand-cream/30 cursor-pointer transition-colors has-[:checked]:border-brand-gold-600 has-[:checked]:bg-brand-ivory font-medium">
+                  <input type="radio" name="previousSupplements" value="Chưa từng dùng, đang tìm hiểu giải pháp chuẩn khoa học" checked class="w-4 h-4 text-brand-gold-600 focus:ring-brand-gold-500" />
+                  <span>Chưa từng dùng, đang tìm hiểu giải pháp chuẩn khoa học</span>
+                </label>
+                <label class="flex items-center gap-3 p-3 rounded-xl border border-brand-sand hover:border-brand-gold-400 bg-brand-cream/30 cursor-pointer transition-colors has-[:checked]:border-brand-gold-600 has-[:checked]:bg-brand-ivory font-medium">
+                  <input type="radio" name="previousSupplements" value="Đã uống canxi / sữa bột nhưng chưa thấy rõ hiệu quả" class="w-4 h-4 text-brand-gold-600 focus:ring-brand-gold-500" />
+                  <span>Đã uống canxi / sữa bột nhưng chưa thấy rõ hiệu quả</span>
+                </label>
+                <label class="flex items-center gap-3 p-3 rounded-xl border border-brand-sand hover:border-brand-gold-400 bg-brand-cream/30 cursor-pointer transition-colors has-[:checked]:border-brand-gold-600 has-[:checked]:bg-brand-ivory font-medium">
+                  <input type="radio" name="previousSupplements" value="Muốn được tư vấn lộ trình chuẩn, an toàn, không lo tác dụng phụ" class="w-4 h-4 text-brand-gold-600 focus:ring-brand-gold-500" />
+                  <span>Muốn được tư vấn lộ trình chuẩn, an toàn, không lo lắng tác dụng phụ</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- CÂU HỎI 5: GÓI SẢN PHẨM ƯU ĐÃI -->
+            <div class="p-4 sm:p-5 rounded-2xl bg-white border border-brand-gold-300 shadow-sm space-y-2.5">
+              <span class="block text-xs sm:text-sm font-bold text-brand-cacao-900">
+                Câu 5: Gói ưu đãi Nano Growth Habit EX Ba/Mẹ quan tâm nhận tư vấn:
+              </span>
               <div class="space-y-2.5">
-                
                 <label class="flex items-center justify-between p-3.5 rounded-xl border-2 border-brand-sand hover:border-brand-gold-400 cursor-pointer transition-colors bg-brand-cream/30 has-[:checked]:border-brand-gold-600 has-[:checked]:bg-brand-ivory">
                   <div class="flex items-center space-x-3">
                     <input type="radio" name="packageSelect" value="Gói 1: Trải nghiệm (1 hộp - 1.250.000đ)" class="w-4 h-4 text-brand-gold-600 focus:ring-brand-gold-500" />
@@ -1885,41 +1916,98 @@
                   </div>
                   <strong class="text-xs sm:text-sm text-brand-cacao-900 font-mono">3.390.000đ</strong>
                 </label>
-
               </div>
             </div>
 
+            <!-- ĐỊA CHỈ NHẬN HÀNG (TÙY CHỌN) -->
+            <div>
+              <label class="block text-xs sm:text-sm font-bold text-brand-cacao-900 mb-1.5" for="shippingAddress">
+                Địa chỉ nhận hàng (nếu muốn nhận hàng ngay tại nhà)
+              </label>
+              <input 
+                type="text" 
+                id="shippingAddress" 
+                name="shippingAddress" 
+                placeholder="Tỉnh/Thành – Quận/Huyện – Số nhà, tên đường (hoặc để trống nếu chỉ cần tư vấn)..." 
+                class="w-full px-4 py-3 rounded-xl border border-brand-gold-300 focus:outline-none focus:ring-2 focus:ring-brand-gold-500 text-xs sm:text-sm bg-brand-cream/40"
+              />
+            </div>
+
             <!-- SUBMIT BUTTON -->
-            <div class="pt-3">
+            <div class="pt-2">
               <button 
                 type="submit" 
                 id="submitBtn"
                 class="w-full py-4 px-6 rounded-2xl font-bold text-base sm:text-lg text-white bg-gradient-to-r from-brand-gold-600 via-brand-cacao-800 to-brand-cacao-950 hover:from-brand-gold-700 hover:to-black shadow-xl hover:shadow-gold-glow transition-all transform hover:-translate-y-0.5 border border-brand-gold-400 text-center flex items-center justify-center gap-2 cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed"
               >
                 <span id="submitBtnSpinner" class="hidden animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full"></span>
-                <span id="submitBtnText">GỬI THÔNG TIN ĐẶT HÀNG & TƯ VẤN NGAY</span>
+                <span id="submitBtnText">GỬI KHẢO SÁT & NHẬN TƯ VẤN LỘ TRÌNH NGAY</span>
               </button>
             </div>
 
-            <div class="text-center pt-2">
-              <span class="text-xs text-brand-cacao-600">Hoặc liên hệ trực tiếp:</span>
+            <div class="text-center pt-1">
+              <span class="text-xs text-brand-cacao-600">🔒 Thông tin của Ba Mẹ được bảo mật tuyệt đối. Hoặc liên hệ nhanh:</span>
               <div class="flex items-center justify-center gap-4 mt-2">
                 <a href="tel:0987654321" class="inline-flex items-center text-xs font-bold text-brand-cacao-800 hover:text-brand-gold-600 underline">
-                  📞 Hotline: [Data to fill in]
+                  📞 Hotline Dược Sĩ: [Data to fill in]
                 </a>
                 <span>•</span>
                 <a href="#dat-hang" class="inline-flex items-center text-xs font-bold text-brand-cacao-800 hover:text-brand-gold-600 underline">
-                  💬 Chat Zalo Dược Sĩ
+                  💬 Chat Zalo Tư Vấn
                 </a>
               </div>
             </div>
 
           </form>
 
+          <!-- TAB 2: NHÚNG GOOGLE FORM TRỰC TIẾP (EMBED IFRAME) -->
+          <div id="googleFormEmbedContainer" class="space-y-6">
+            
+            <div class="p-4 sm:p-5 rounded-2xl bg-brand-ivory border-2 border-dashed border-brand-gold-400 text-xs sm:text-sm text-brand-cacao-800 space-y-2">
+              <div class="flex items-center gap-2 font-bold text-brand-cacao-900 text-sm sm:text-base">
+                <span>💡</span>
+                <span>Cách nhúng Google Form của riêng bạn (Tự động vào Google Sheets 100%):</span>
+              </div>
+              <ol class="list-decimal pl-5 space-y-1 text-xs text-brand-cacao-700">
+                <li>Truy cập <a href="https://forms.new" target="_blank" class="text-blue-600 underline font-bold">forms.new</a> để tạo Google Form với các câu hỏi tương tự trên.</li>
+                <li>Bấm <strong>Gửi</strong> (Send) ở góc trên bên phải ➔ Chọn tab biểu tượng <strong>&lt; &gt;</strong> (Nhúng HTML).</li>
+                <li>Sao chép đường link trong thuộc tính <code>src="..."</code> và dán thay thế vào thẻ <code>&lt;iframe&gt;</code> bên dưới trong file <code>index.html</code>.</li>
+              </ol>
+            </div>
+
+            <!-- Khung nhúng Google Form Responsive -->
+            <div class="w-full rounded-2xl overflow-hidden border border-brand-gold-300 shadow-md bg-white">
+              <iframe 
+                id="googleFormIframe"
+                src="https://docs.google.com/forms/d/e/1FAIpQLSdROzpmiOhN5FBrfsR0IdHzmZXeNH2ayVjX6yjRd335H7lXRg/viewform?embedded=true" 
+                width="100%" 
+                height="850" 
+                frameborder="0" 
+                marginheight="0" 
+                marginwidth="0"
+                class="w-full"
+              >
+                Đang tải biểu mẫu Google Form...
+              </iframe>
+            </div>
+
+            <div class="text-center">
+              <button 
+                type="button" 
+                onclick="switchFormTab('native')" 
+                class="inline-flex items-center text-xs font-bold text-brand-cacao-800 hover:text-brand-gold-700 underline"
+              >
+                ← Quay lại Form chuẩn giao diện Salepage
+              </button>
+            </div>
+
+          </div>
+
         </div>
 
       </div>
     </section>
+
 
     <!-- SECTION 14: CAM KẾT TỪ NHÀ PHÂN PHỐI NICHIEI ASIA -->
     <section class="py-12 bg-brand-cacao-900 text-white border-t border-b border-brand-gold-500/30">
@@ -2251,13 +2339,38 @@
       if (packageId === 'goi-3' && radios[2]) radios[2].checked = true;
     }
 
+        // Tab switching giữa Form Giao Diện & Google Form Embed
+    function switchFormTab(tabName) {
+      const tabNative = document.getElementById('tabNative');
+      const tabGoogle = document.getElementById('tabGoogle');
+      const formNative = document.getElementById('orderForm');
+      const formGoogle = document.getElementById('googleFormEmbedContainer');
+      
+      if (!tabNative || !tabGoogle || !formNative || !formGoogle) return;
+
+      if (tabName === 'native') {
+        formNative.classList.remove('hidden');
+        formGoogle.classList.add('hidden');
+        tabNative.className = "flex-1 py-2.5 px-3 rounded-xl font-bold text-xs sm:text-sm bg-brand-cacao-900 text-brand-gold-400 shadow transition-all text-center";
+        tabGoogle.className = "flex-1 py-2.5 px-3 rounded-xl font-bold text-xs sm:text-sm bg-white text-brand-cacao-700 hover:bg-brand-ivory border border-brand-gold-300/60 transition-all text-center";
+      } else {
+        formNative.classList.add('hidden');
+        formGoogle.classList.remove('hidden');
+        tabGoogle.className = "flex-1 py-2.5 px-3 rounded-xl font-bold text-xs sm:text-sm bg-brand-cacao-900 text-brand-gold-400 shadow transition-all text-center";
+        tabNative.className = "flex-1 py-2.5 px-3 rounded-xl font-bold text-xs sm:text-sm bg-white text-brand-cacao-700 hover:bg-brand-ivory border border-brand-gold-300/60 transition-all text-center";
+      }
+    }
+
     // =========================================================================
-    // CẤU HÌNH TỰ ĐỘNG LƯU ĐƠN HÀNG VÀO GOOGLE SHEET & BÁO LEAD TELEGRAM
+    // CẤU HÌNH TỰ ĐỘNG GỬI DỮ LIỆU (KHÔNG CẦN BACKEND):
     // =========================================================================
-    // Cách 1: Dán URL Google Apps Script (tự động lưu Sheet + tự động báo Telegram an toàn)
+    // Cách 1: Dán URL Web App từ Google Apps Script (tự động lưu vào Google Sheet)
     const GOOGLE_SHEETS_SCRIPT_URL = ""; 
 
-    // Cách 2: (Tùy chọn) Bắn thông báo trực tiếp đến Telegram Group từ trình duyệt
+    // Cách 2: (Tùy chọn) Dán URL Formspree.io (ví dụ: https://formspree.io/f/xbjvkqwe)
+    const FORMSPREE_ENDPOINT = ""; 
+
+    // Cách 3: Bắn thông báo trực tiếp đến Telegram Group (Đã thiết lập sẵn)
     const TELEGRAM_BOT_TOKEN = "7966144550:AAEUt6ystZCBFMrZUBXS7lJII6RZjZDNTTY"; // Bot: Huy CEO
     const TELEGRAM_CHAT_ID = "-1004414191458";   // Group: Huy 8
 
@@ -2268,14 +2381,15 @@
       const submitBtnText = document.getElementById('submitBtnText');
       const submitBtnSpinner = document.getElementById('submitBtnSpinner');
       
+      // Đọc thông tin từ form
       const parentName = document.getElementById('parentName')?.value.trim() || '';
       const phone = document.getElementById('phoneNumber')?.value.trim() || '';
-      const childAge = document.getElementById('childAge')?.value.trim() || '';
-      const childHeight = document.getElementById('childHeight')?.value.trim() || '';
-      const childWeight = document.getElementById('childWeight')?.value.trim() || '';
-      const currentSupplements = document.getElementById('currentSupplements')?.value.trim() || '';
-      const shippingAddress = document.getElementById('shippingAddress')?.value.trim() || '';
+      const childAgeGender = document.getElementById('childAgeGender')?.value.trim() || '';
+      const growthWorry = document.querySelector('input[name="growthWorry"]:checked')?.value || 'Chưa chọn';
+      const growthGoal = document.querySelector('input[name="growthGoal"]:checked')?.value || 'Chưa chọn';
+      const previousSupplements = document.querySelector('input[name="previousSupplements"]:checked')?.value || 'Chưa chọn';
       const selectedPkg = document.querySelector('input[name="packageSelect"]:checked')?.value || 'Gói Chuẩn Đột Phá (2 hộp)';
+      const shippingAddress = document.getElementById('shippingAddress')?.value.trim() || '';
       const timestamp = new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
 
       // 1. Hiển thị trạng thái đang gửi
@@ -2283,20 +2397,20 @@
       if (submitBtnSpinner) submitBtnSpinner.classList.remove('hidden');
       if (submitBtnText) submitBtnText.textContent = "ĐANG GỬI THÔNG TIN ĐẾN HỆ THỐNG...";
 
-      // 2. Chuẩn bị dữ liệu gửi lên Google Sheet
+      // 2. Chuẩn bị dữ liệu gửi đi
       const formData = new FormData();
       formData.append('timestamp', timestamp);
       formData.append('parentName', parentName);
       formData.append('phoneNumber', phone);
-      formData.append('childAge', childAge);
-      formData.append('childHeight', childHeight);
-      formData.append('childWeight', childWeight);
-      formData.append('currentSupplements', currentSupplements);
-      formData.append('shippingAddress', shippingAddress);
+      formData.append('childAgeGender', childAgeGender);
+      formData.append('growthWorry', growthWorry);
+      formData.append('growthGoal', growthGoal);
+      formData.append('previousSupplements', previousSupplements);
       formData.append('packageSelect', selectedPkg);
+      formData.append('shippingAddress', shippingAddress);
       formData.append('source', 'Salepage Nano Growth Habit EX');
 
-      // 3. Gửi dữ liệu tới Google Apps Script (lưu Sheet và báo Telegram phía Server)
+      // 3. Gửi dữ liệu tới Google Apps Script (tự động lưu vào Google Sheet)
       if (GOOGLE_SHEETS_SCRIPT_URL && GOOGLE_SHEETS_SCRIPT_URL.startsWith('http')) {
         try {
           await fetch(GOOGLE_SHEETS_SCRIPT_URL, {
@@ -2310,7 +2424,21 @@
         }
       }
 
-      // 4. Bắn trực tiếp đến Telegram Group (Hỗ trợ 100% mọi môi trường kể cả file:// offline và online)
+      // 4. Gửi dữ liệu tới Formspree.io (nếu có cấu hình)
+      if (FORMSPREE_ENDPOINT && FORMSPREE_ENDPOINT.startsWith('http')) {
+        try {
+          await fetch(FORMSPREE_ENDPOINT, {
+            method: 'POST',
+            body: formData,
+            headers: { 'Accept': 'application/json' }
+          });
+          console.log("Đã gửi dữ liệu thành công tới Formspree.io!");
+        } catch (fErr) {
+          console.warn("Lỗi kết nối Formspree:", fErr);
+        }
+      }
+
+      // 5. Bắn thông báo trực tiếp đến Telegram Group
       if (TELEGRAM_BOT_TOKEN && TELEGRAM_CHAT_ID) {
         function escapeHtml(str) {
           if (!str) return '';
@@ -2320,18 +2448,31 @@
             .replace(/>/g, "&gt;");
         }
 
-        const teleMsg = `🔔 <b>CÓ ĐƠN HÀNG MỚI - NANO GROWTH HABIT EX!</b>\n`
-          + `━━━━━━━━━━━━━━━━━━\n`
-          + `👤 <b>Phụ huynh:</b> ${escapeHtml(parentName)}\n`
-          + `📞 <b>Số điện thoại:</b> <code>${escapeHtml(phone)}</code>\n`
-          + `👶 <b>Tuổi của con:</b> ${escapeHtml(childAge)}\n`
-          + `📏 <b>Chiều cao:</b> ${escapeHtml(childHeight) || 'Chưa rõ'} | ⚖️ <b>Cân nặng:</b> ${escapeHtml(childWeight) || 'Chưa rõ'}\n`
-          + `💊 <b>SP con đang dùng:</b> ${escapeHtml(currentSupplements) || 'Không'}\n`
-          + `📦 <b>Gói lựa chọn:</b> <b>${escapeHtml(selectedPkg)}</b>\n`
-          + `📍 <b>Địa chỉ:</b> ${escapeHtml(shippingAddress) || 'Chưa cung cấp'}\n`
-          + `⏰ <b>Thời gian:</b> ${timestamp}\n`
-          + `━━━━━━━━━━━━━━━━━━\n`
-          + `👉 <i>Dược sĩ chuyên môn hãy liên hệ tư vấn ngay!</i>`;
+        const teleMsg = `🔔 <b>CÓ KHẢO SÁT & ĐƠN HÀNG MỚI - NANO GROWTH!</b>
+`
+          + `━━━━━━━━━━━━━━━━━━
+`
+          + `👤 <b>Phụ huynh:</b> ${escapeHtml(parentName)}
+`
+          + `📞 <b>Số điện thoại / Zalo:</b> <code>${escapeHtml(phone)}</code>
+`
+          + `👶 <b>Tuổi & Giới tính bé:</b> ${escapeHtml(childAgeGender)}
+`
+          + `⚠️ <b>Trăn trở nhất:</b> ${escapeHtml(growthWorry)}
+`
+          + `🎯 <b>Mục tiêu 3-6 tháng:</b> ${escapeHtml(growthGoal)}
+`
+          + `💊 <b>Đã dùng giải pháp:</b> ${escapeHtml(previousSupplements)}
+`
+          + `📦 <b>Gói lựa chọn:</b> <b>${escapeHtml(selectedPkg)}</b>
+`
+          + `📍 <b>Địa chỉ:</b> ${escapeHtml(shippingAddress) || 'Chưa cung cấp'}
+`
+          + `⏰ <b>Thời gian:</b> ${timestamp}
+`
+          + `━━━━━━━━━━━━━━━━━━
+`
+          + `👉 <i>Dược sĩ chuyên môn hãy liên hệ tư vấn lộ trình ngay!</i>`;
 
         const teleParams = new URLSearchParams({
           chat_id: TELEGRAM_CHAT_ID,
@@ -2351,16 +2492,16 @@
         }
       }
 
-      // 5. Khôi phục nút bấm
+      // 6. Khôi phục nút bấm
       if (submitBtn) submitBtn.disabled = false;
       if (submitBtnSpinner) submitBtnSpinner.classList.add('hidden');
-      if (submitBtnText) submitBtnText.textContent = "GỬI THÔNG TIN ĐẶT HÀNG & TƯ VẤN NGAY";
+      if (submitBtnText) submitBtnText.textContent = "GỬI KHẢO SÁT & NHẬN TƯ VẤN LỘ TRÌNH NGAY";
 
-      // 5. Hiển thị Popup xác nhận đặt hàng thành công
+      // 7. Hiển thị Popup xác nhận khảo sát thành công
       const modal = document.getElementById('successModal');
       const message = document.getElementById('modalMessage');
       if (message) {
-        message.innerHTML = `Cảm ơn phụ huynh <strong>${parentName}</strong> (${phone})!<br/><br/>Hệ thống đã ghi nhận đăng ký <strong>${selectedPkg}</strong> và tự động chuyển đến chuyên viên tư vấn. Dược sĩ Nichiei Asia sẽ liên hệ qua điện thoại sớm nhất để đồng hành cùng lộ trình của con!`;
+        message.innerHTML = `Cảm ơn phụ huynh <strong>${parentName}</strong> (${phone})!<br/><br/>Hệ thống đã ghi nhận đầy đủ câu trả lời khảo sát và nhu cầu <strong>${selectedPkg}</strong>. Dược sĩ chuyên môn Nichiei Asia sẽ liên hệ qua Zalo / điện thoại sớm nhất để phân tích và gửi tặng lộ trình tăng trưởng riêng cho bé!`;
       }
       if (modal) modal.classList.remove('hidden');
       document.getElementById('orderForm').reset();
