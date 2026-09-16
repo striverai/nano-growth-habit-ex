@@ -2520,5 +2520,596 @@
       document.getElementById('successModal').classList.add('hidden');
     }
   </script>
+
+  <!-- ============================================================
+       NANO GROWTH CHATBOT WIDGET
+       Kịch bản: sales_script.md | Màu: brand cacao + gold
+  ============================================================ -->
+  <style>
+    /* --- Widget Shell --- */
+    #ng-chat-widget {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 9999;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+
+    /* --- Trigger Button --- */
+    #ng-chat-trigger {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #753E17 0%, #B45309 60%, #F59E0B 100%);
+      box-shadow: 0 4px 20px rgba(181,83,9,0.45), 0 0 0 0 rgba(245,158,11,0.5);
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: ng-pulse 2.5s infinite;
+      transition: transform 0.2s ease;
+    }
+    #ng-chat-trigger:hover { transform: scale(1.08); }
+    #ng-chat-trigger svg { width: 28px; height: 28px; fill: #FDFBF7; }
+    @keyframes ng-pulse {
+      0%   { box-shadow: 0 4px 20px rgba(181,83,9,.45), 0 0 0 0 rgba(245,158,11,.5); }
+      60%  { box-shadow: 0 4px 20px rgba(181,83,9,.45), 0 0 0 12px rgba(245,158,11,0); }
+      100% { box-shadow: 0 4px 20px rgba(181,83,9,.45), 0 0 0 0 rgba(245,158,11,0); }
+    }
+
+    /* --- Notification Badge --- */
+    #ng-chat-badge {
+      position: absolute;
+      top: -4px; right: -4px;
+      width: 20px; height: 20px;
+      background: #BE185D;
+      border-radius: 50%;
+      border: 2px solid #FDFBF7;
+      font-size: 11px;
+      font-weight: 700;
+      color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      animation: ng-badge-pop 0.4s ease;
+    }
+    @keyframes ng-badge-pop {
+      0%   { transform: scale(0); }
+      80%  { transform: scale(1.2); }
+      100% { transform: scale(1); }
+    }
+
+    /* --- Chat Window --- */
+    #ng-chat-window {
+      position: absolute;
+      bottom: 72px;
+      right: 0;
+      width: 360px;
+      max-height: 540px;
+      display: flex;
+      flex-direction: column;
+      background: #FDFBF7;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px -10px rgba(56,26,5,0.22), 0 4px 16px rgba(56,26,5,0.10);
+      overflow: hidden;
+      transform-origin: bottom right;
+      transform: scale(0) translateY(12px);
+      opacity: 0;
+      transition: transform 0.28s cubic-bezier(.34,1.56,.64,1), opacity 0.22s ease;
+      pointer-events: none;
+    }
+    #ng-chat-window.ng-open {
+      transform: scale(1) translateY(0);
+      opacity: 1;
+      pointer-events: all;
+    }
+    @media (max-width: 420px) {
+      #ng-chat-window { width: calc(100vw - 32px); right: -8px; }
+    }
+
+    /* --- Header --- */
+    #ng-chat-header {
+      background: linear-gradient(135deg, #4A2306 0%, #753E17 55%, #B45309 100%);
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      flex-shrink: 0;
+    }
+    .ng-avatar {
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #F59E0B, #FBBF24);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+      box-shadow: 0 0 0 2px rgba(255,255,255,0.3);
+    }
+    .ng-header-info { flex: 1; }
+    .ng-header-name { color: #FFF9EE; font-size: 14px; font-weight: 700; line-height: 1.2; }
+    .ng-header-status { color: #FBBF24; font-size: 11px; display: flex; align-items: center; gap: 4px; }
+    .ng-status-dot { width: 6px; height: 6px; background: #34D399; border-radius: 50%; animation: ng-blink 1.6s infinite; }
+    @keyframes ng-blink { 0%,100%{opacity:1} 50%{opacity:.4} }
+    #ng-chat-close {
+      background: rgba(255,255,255,0.15);
+      border: none; cursor: pointer;
+      border-radius: 50%; width: 28px; height: 28px;
+      display: flex; align-items: center; justify-content: center;
+      color: #FFF9EE; font-size: 16px; line-height: 1;
+      transition: background 0.2s;
+    }
+    #ng-chat-close:hover { background: rgba(255,255,255,0.28); }
+
+    /* --- Messages Area --- */
+    #ng-chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 14px 14px 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      scroll-behavior: smooth;
+    }
+    #ng-chat-messages::-webkit-scrollbar { width: 4px; }
+    #ng-chat-messages::-webkit-scrollbar-track { background: transparent; }
+    #ng-chat-messages::-webkit-scrollbar-thumb { background: #E8DCC8; border-radius: 2px; }
+
+    /* --- Message Bubbles --- */
+    .ng-msg { display: flex; gap: 8px; max-width: 100%; animation: ng-fadein 0.25s ease; }
+    @keyframes ng-fadein { from { opacity:0; transform: translateY(6px); } to { opacity:1; transform:none; } }
+    .ng-msg.ng-bot { align-items: flex-start; }
+    .ng-msg.ng-user { justify-content: flex-end; }
+    .ng-msg-avatar { width: 28px; height: 28px; border-radius: 50%; background: linear-gradient(135deg,#F59E0B,#FBBF24); display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; margin-top: 2px; }
+    .ng-bubble {
+      max-width: 252px;
+      padding: 10px 13px;
+      border-radius: 16px;
+      font-size: 13px;
+      line-height: 1.55;
+    }
+    .ng-bot .ng-bubble {
+      background: #fff;
+      color: #381A05;
+      border-top-left-radius: 4px;
+      box-shadow: 0 2px 8px rgba(56,26,5,0.08);
+    }
+    .ng-user .ng-bubble {
+      background: linear-gradient(135deg, #753E17, #B45309);
+      color: #FFF9EE;
+      border-top-right-radius: 4px;
+    }
+    .ng-bubble b { font-weight: 700; }
+    .ng-bubble ul { margin: 6px 0 2px 4px; padding-left: 14px; }
+    .ng-bubble ul li { margin-bottom: 3px; }
+
+    /* --- Typing Indicator --- */
+    #ng-typing { display: flex; gap: 8px; align-items: flex-end; }
+    .ng-typing-dots { background: #fff; border-radius: 14px; border-top-left-radius: 4px; padding: 10px 14px; box-shadow: 0 2px 8px rgba(56,26,5,0.08); display: flex; gap: 4px; align-items: center; }
+    .ng-dot { width: 6px; height: 6px; background: #B45309; border-radius: 50%; animation: ng-bounce 1.1s infinite; }
+    .ng-dot:nth-child(2) { animation-delay: .18s; }
+    .ng-dot:nth-child(3) { animation-delay: .36s; }
+    @keyframes ng-bounce { 0%,80%,100%{transform:translateY(0)} 40%{transform:translateY(-5px)} }
+
+    /* --- Quick Replies --- */
+    #ng-quick-replies {
+      padding: 8px 12px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      flex-shrink: 0;
+      border-top: 1px solid #F7F2E7;
+      background: #FDFBF7;
+    }
+    .ng-qr-btn {
+      background: #fff;
+      border: 1.5px solid #D97706;
+      color: #753E17;
+      border-radius: 20px;
+      padding: 5px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      cursor: pointer;
+      transition: all 0.18s;
+      white-space: nowrap;
+    }
+    .ng-qr-btn:hover { background: #B45309; color: #FFF9EE; border-color: #B45309; }
+
+    /* --- Input Row --- */
+    #ng-input-row {
+      display: flex;
+      gap: 8px;
+      padding: 10px 12px 12px;
+      flex-shrink: 0;
+      border-top: 1px solid #F7F2E7;
+      background: #FDFBF7;
+    }
+    #ng-user-input {
+      flex: 1;
+      border: 1.5px solid #E8DCC8;
+      border-radius: 22px;
+      padding: 9px 14px;
+      font-size: 13px;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      color: #381A05;
+      background: #fff;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    #ng-user-input:focus { border-color: #D97706; }
+    #ng-user-input::placeholder { color: #C4A882; }
+    #ng-send-btn {
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      background: linear-gradient(135deg,#B45309,#F59E0B);
+      border: none;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      transition: transform 0.15s, box-shadow 0.15s;
+      box-shadow: 0 2px 8px rgba(181,83,9,0.3);
+    }
+    #ng-send-btn:hover { transform: scale(1.08); box-shadow: 0 4px 14px rgba(181,83,9,0.4); }
+    #ng-send-btn svg { width: 18px; height: 18px; fill: #fff; }
+
+    /* --- CTA Buy Button --- */
+    .ng-cta-buy {
+      display: block;
+      margin: 8px 0 4px;
+      padding: 10px 16px;
+      background: linear-gradient(135deg,#B45309,#F59E0B);
+      color: #fff !important;
+      font-weight: 700;
+      font-size: 13px;
+      border-radius: 12px;
+      text-align: center;
+      text-decoration: none;
+      box-shadow: 0 3px 12px rgba(181,83,9,0.35);
+      transition: opacity 0.2s, transform 0.15s;
+    }
+    .ng-cta-buy:hover { opacity: 0.9; transform: translateY(-1px); }
+    .ng-cta-form {
+      display: block;
+      margin: 6px 0 0;
+      padding: 8px 16px;
+      background: transparent;
+      border: 1.5px solid #D97706;
+      color: #753E17 !important;
+      font-weight: 600;
+      font-size: 12px;
+      border-radius: 12px;
+      text-align: center;
+      text-decoration: none;
+      transition: all 0.18s;
+    }
+    .ng-cta-form:hover { background: #753E17; color: #FFF9EE !important; }
+
+    /* --- Divider label --- */
+    .ng-divider { text-align: center; font-size: 10px; color: #C4A882; margin: 4px 0; letter-spacing: .4px; }
+  </style>
+
+  <!-- Chatbot HTML -->
+  <div id="ng-chat-widget">
+    <!-- Trigger button -->
+    <button id="ng-chat-trigger" onclick="ngChatToggle()" aria-label="Mở tư vấn chatbot">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M20 2H4a2 2 0 00-2 2v18l4-4h14a2 2 0 002-2V4a2 2 0 00-2-2zm-8 13H8v-2h4v2zm4-4H8v-2h8v2zm0-4H8V5h8v2z"/>
+      </svg>
+    </button>
+    <span id="ng-chat-badge">1</span>
+
+    <!-- Chat window -->
+    <div id="ng-chat-window" role="dialog" aria-label="Tư vấn Nano Growth">
+      <!-- Header -->
+      <div id="ng-chat-header">
+        <div class="ng-avatar">🌱</div>
+        <div class="ng-header-info">
+          <div class="ng-header-name">Trợ lý Nano Growth</div>
+          <div class="ng-header-status">
+            <span class="ng-status-dot"></span>
+            Đang hoạt động
+          </div>
+        </div>
+        <button id="ng-chat-close" onclick="ngChatToggle()" aria-label="Đóng chat">✕</button>
+      </div>
+
+      <!-- Messages -->
+      <div id="ng-chat-messages"></div>
+
+      <!-- Quick replies -->
+      <div id="ng-quick-replies"></div>
+
+      <!-- Input -->
+      <div id="ng-input-row">
+        <input id="ng-user-input" type="text" placeholder="Nhắn gì đó cho em..." maxlength="200"
+          onkeydown="if(event.key==='Enter') ngSendMessage()" autocomplete="off" />
+        <button id="ng-send-btn" onclick="ngSendMessage()" aria-label="Gửi">
+          <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  (function() {
+    'use strict';
+
+    /* =============================================
+       DATA – Kịch bản từ sales_script.md
+    ============================================= */
+    const GREETING = `Ủa, mẹ đang tìm hiểu cho bé nhà mình à? 😊\n\nEm là trợ lý tư vấn của <b>Nano Growth Habit EX</b> — sản phẩm dinh dưỡng hỗ trợ tăng trưởng cho trẻ 6–18 tuổi, sản xuất chuẩn Nhật Bản.\n\nMẹ đang băn khoăn điều gì nhất? Bấm chọn hoặc tự nhắn cho em nha 👇`;
+
+    const TOPICS = [
+      { label: '📏 Tác dụng & hiệu quả',  key: 'q1' },
+      { label: '⏱️ Bao lâu thấy kết quả',  key: 'q2' },
+      { label: '💊 Đang uống canxi rồi',    key: 'q3' },
+      { label: '⚠️ Sợ dậy thì sớm',         key: 'q4' },
+      { label: '🚽 Lo con bị táo bón',       key: 'q5' },
+      { label: '👶 Bé mấy tuổi dùng được',  key: 'q6' },
+      { label: '📋 Cách dùng / liều dùng',   key: 'q7' },
+      { label: '✅ Có chính hãng không',     key: 'q8' },
+      { label: '💰 Giá bao nhiêu?',          key: 'q9' },
+      { label: '🧬 Bố mẹ thấp thì sao',      key: 'q10' },
+      { label: '🛒 Muốn đặt mua ngay',       key: 'buy' },
+      { label: '📝 Để lại thông tin tư vấn', key: 'form' },
+    ];
+
+    const ANSWERS = {
+      q1: `Thật ra em sẽ nói thẳng luôn: <b>không ai có thể cam kết chắc một số cm cụ thể</b> — ai hứa vậy mẹ nên cẩn thận ạ.\n\nNano Growth là thực phẩm bảo vệ sức khỏe, không phải thuốc. Công thức hỗ trợ đồng bộ 5 nền tảng:\n\n• Alpha-GPC → hỗ trợ tín hiệu tăng trưởng tự nhiên lúc ngủ sâu\n• Protetite + Canxi vỏ trứng + D3 + CPP → hỗ trợ hệ xương\n• BCAA → hỗ trợ thể chất, cơ bắp\n• DHA + Spirulina → hỗ trợ não bộ\n• Lactobacillus plantarum 6 tỷ CFU → hỗ trợ tiêu hóa & hấp thu\n\nKết quả thật sự phụ thuộc vào độ tuổi, thể trạng, vận động, giấc ngủ của từng bé mẹ ơi 🙏`,
+
+      q2: `Mẹ hỏi câu này hay lắm! 😄\n\nThật ra phát triển thể chất không thể đo sau 2 tuần. Lộ trình tham khảo:\n\n• <b>Tháng 1–2:</b> Tiêu hóa ổn hơn, ăn ngon, ngủ sâu — nền tảng để dưỡng chất vào được\n• <b>Tháng 3–6:</b> Hỗ trợ hệ xương và thể trạng tiếp tục\n• <b>6 tháng+:</b> Duy trì nền tảng trong giai đoạn tăng trưởng\n\nNhiều mẹ phản hồi thấy con <b>ăn ngon hơn, ngủ sâu hơn, ít táo bón</b> ngay từ tháng đầu — đây là dấu hiệu tốt nhất ạ 😊`,
+
+      q3: `Câu này em nghe thường xuyên lắm 😄\n\nThật ra Nano Growth không phải một viên canxi thêm vào. Khác nhau một trời một vực:\n\n<b>Canxi thông thường</b> → chỉ cung cấp khoáng chất → như đổ thêm gạch vào sân\n\n<b>Nano Growth</b> → có thêm Alpha-GPC hỗ trợ <b>tín hiệu tăng trưởng tự nhiên lúc ngủ sâu</b> → người thợ xây mới xuất hiện để dùng gạch đó\n\nNgoài ra còn có BCAA, DHA, lợi khuẩn, Spirulina — tổng 17 hoạt chất phối hợp.\n\nMẹ đang cho con dùng gì, kể tên em xem có chồng chéo không nhé 🙏`,
+
+      q4: `Lo lắng này rất hợp lý — em trân trọng vì mẹ cẩn thận cho con 🙏\n\nNói thẳng: <b>Nano Growth không phải hormone tăng trưởng nhân tạo.</b> Đây là thực phẩm bảo vệ sức khỏe, không bổ sung hormone từ bên ngoài.\n\nAlpha-GPC hỗ trợ <b>quá trình sinh lý tự nhiên</b> — tuyến yên tự tiết hormone theo nhịp sinh học của trẻ, không phải tiêm hormone vào.\n\nSố đăng ký Bộ Y Tế: <b>6660/2022/ĐKSP</b> — mẹ có thể tra trực tiếp trên web Cục An toàn thực phẩm.\n\nNếu con đang có tình trạng đặc biệt về nội tiết, em luôn khuyên mẹ hỏi bác sĩ trước ạ.`,
+
+      q5: `Táo bón khi uống canxi là nỗi khổ rất phổ biến 😅\n\nNano Growth dùng <b>canxi từ bột vỏ trứng tự nhiên</b> kết hợp CPP + Vitamin D3 — giúp canxi duy trì trạng thái hòa tan, hạn chế kết tủa.\n\nThêm vào đó là <b>Lactobacillus plantarum 6 tỷ CFU</b> + Spirulina hỗ trợ cân bằng hệ vi sinh đường ruột.\n\nNhiều phụ huynh phản hồi con đi vệ sinh đều đặn hơn và bớt nặng bụng.\n\n<i>Khả năng dung nạp mỗi bé khác nhau — nếu có biểu hiện lạ thì dừng và báo em ngay nhé ạ.</i>`,
+
+      q6: `Dùng được ạ! Sản phẩm dành cho trẻ <b>từ 6 tuổi đến 18 tuổi</b> — đúng giai đoạn cơ thể đang tăng trưởng mạnh nhất.\n\nDạng viên nhai hương cacao rất thân thiện — con có thể nhai trực tiếp, ngậm tan hoặc uống cùng nước, không cần nuốt viên nguyên.\n\nThật ra giai đoạn <b>6–10 tuổi là tiền dậy thì</b> — rất quan trọng để xây nền tảng xương. Bắt đầu sớm thường cho kết quả tốt hơn mẹ ơi ạ 😊`,
+
+      q7: `Đơn giản lắm mẹ:\n\n• <b>Liều dùng:</b> 2 viên/ngày\n• <b>Thời điểm:</b> Buổi tối, trước khi đi ngủ ~30 phút\n• <b>Cách dùng:</b> Nhai, ngậm tan, hoặc uống cùng nước\n\nTại sao tối? Vì hormone tăng trưởng tự nhiên tiết ra nhiều nhất trong chu kỳ ngủ sâu — uống trước ngủ giúp dưỡng chất đúng giờ hơn ạ.\n\nNhiều mẹ nói con <b>tự giác nhắc mẹ uống mỗi tối</b> vì thích mùi cacao 😄`,
+
+      q8: `Mẹ hỏi đúng trọng tâm rồi 👍\n\n✅ Sản xuất tại Nhật Bản, dây chuyền chuẩn <b>GMP</b>\n✅ Nhập khẩu <b>chính ngạch 100%</b>\n✅ Phân phối độc quyền bởi <b>Nichiei Asia</b>\n✅ Số đăng ký: <b>6660/2022/ĐKSP – Bộ Y Tế VN</b>\n✅ Có tem chống hàng giả, quét mã vạch kiểm tra được\n\nMẹ nên mua qua kênh chính thức để đảm bảo sản phẩm còn hạn và đúng chất lượng nhé ạ 🙏`,
+
+      q9: `Thật ra nhìn con số thì mẹ thấy cao, nhưng tính ra thì khác mẹ ơi:\n\n• 1 hộp = 120 viên = <b>dùng đủ 2 tháng</b>\n• Chỉ <b>~20.000đ/ngày</b> — bằng một hộp sữa tươi thôi ạ\n\n<b>Bảng giá:</b>\n• Gói Trải Nghiệm – 1 hộp (~2 tháng): <b>1.250.000đ</b>\n• Gói Chuẩn Đột Phá – 2 hộp (~4 tháng): <b>2.350.000đ</b> ⭐ + thước đo + cẩm nang\n• Gói Toàn Diện – 3 hộp (~6 tháng): <b>3.390.000đ</b> + men vi sinh + tư vấn 1-1`,
+
+      q10: `Câu hỏi này em được hỏi rất nhiều — và sẽ trả lời thật nhé.\n\n<b>Di truyền có ảnh hưởng, nhưng không phải tất cả.</b> Chiều cao còn phụ thuộc vào dinh dưỡng, vận động, giấc ngủ, sức khỏe đường ruột — những yếu tố mẹ hoàn toàn chủ động chăm sóc được.\n\nNano Growth không thể thay đổi gen — em sẽ không bao giờ nói vậy. Nhưng sản phẩm giúp <b>hỗ trợ nền tảng dinh dưỡng đúng và đủ</b>, để con phát huy tốt nhất tiềm năng tăng trưởng của chính mình trong giai đoạn vàng 6–18 tuổi ❤️`,
+
+      buy: `__BUY__`,
+      form: `__FORM__`,
+    };
+
+    const BUY_MSG = `Mẹ đang cân nhắc đúng chỗ rồi đó 😊\n\nMẹ bấm nút bên dưới để điền thông tin vào form đặt hàng — bên em sẽ xác nhận đơn và hỗ trợ ship trong ngày nha ạ!`;
+
+    const FORM_MSG = `Không sao mẹ — mình điền thông tin trước để em lưu lại, khi nào mẹ sẵn sàng em liên hệ tư vấn thêm nha.\n\nMẹ bấm vào form bên dưới, chỉ cần tên + SĐT + tuổi bé là đủ ạ 🙏`;
+
+    /* =============================================
+       STATE
+    ============================================= */
+    let isOpen = false;
+    let isTyping = false;
+    let greetedOnce = false;
+
+    /* =============================================
+       HELPERS
+    ============================================= */
+    function scrollBottom() {
+      const el = document.getElementById('ng-chat-messages');
+      if (el) el.scrollTop = el.scrollHeight;
+    }
+
+    function setQuickReplies(topics) {
+      const qr = document.getElementById('ng-quick-replies');
+      if (!qr) return;
+      qr.innerHTML = '';
+      topics.forEach(function(t) {
+        const btn = document.createElement('button');
+        btn.className = 'ng-qr-btn';
+        btn.textContent = t.label;
+        btn.onclick = function() { handleQuickReply(t); };
+        qr.appendChild(btn);
+      });
+    }
+
+    function clearQuickReplies() {
+      const qr = document.getElementById('ng-quick-replies');
+      if (qr) qr.innerHTML = '';
+    }
+
+    function appendMessage(role, html) {
+      const box = document.getElementById('ng-chat-messages');
+      if (!box) return;
+      const wrap = document.createElement('div');
+      wrap.className = 'ng-msg ng-' + role;
+      if (role === 'bot') {
+        wrap.innerHTML = '<div class="ng-msg-avatar">🌱</div><div class="ng-bubble">' + html + '</div>';
+      } else {
+        wrap.innerHTML = '<div class="ng-bubble">' + html + '</div>';
+      }
+      // Remove typing if exists
+      const typing = document.getElementById('ng-typing');
+      if (typing) typing.remove();
+      box.appendChild(wrap);
+      scrollBottom();
+    }
+
+    function showTyping() {
+      const box = document.getElementById('ng-chat-messages');
+      if (!box || document.getElementById('ng-typing')) return;
+      const t = document.createElement('div');
+      t.id = 'ng-typing';
+      t.className = 'ng-msg ng-bot';
+      t.innerHTML = '<div class="ng-msg-avatar">🌱</div><div class="ng-typing-dots"><span class="ng-dot"></span><span class="ng-dot"></span><span class="ng-dot"></span></div>';
+      box.appendChild(t);
+      scrollBottom();
+    }
+
+    function botReply(htmlMsg, delay, afterCb) {
+      delay = delay || 900;
+      isTyping = true;
+      showTyping();
+      setTimeout(function() {
+        isTyping = false;
+        appendMessage('bot', htmlMsg);
+        if (afterCb) afterCb();
+      }, delay);
+    }
+
+    function appendCTABuy() {
+      const box = document.getElementById('ng-chat-messages');
+      if (!box) return;
+      const div = document.createElement('div');
+      div.style.padding = '0 8px';
+      div.innerHTML =
+        '<a href="#orderForm" class="ng-cta-buy" onclick="ngChatClose()">🛒 Điền form đặt hàng ngay</a>' +
+        '<a href="#orderForm" class="ng-cta-form" onclick="ngChatClose()">📝 Để lại thông tin — em tư vấn thêm</a>';
+      const typing = document.getElementById('ng-typing');
+      if (typing) typing.remove();
+      box.appendChild(div);
+      scrollBottom();
+    }
+
+    /* =============================================
+       LOGIC
+    ============================================= */
+    function handleQuickReply(topic) {
+      // Show user bubble
+      appendMessage('user', topic.label);
+      clearQuickReplies();
+
+      var ans = ANSWERS[topic.key];
+
+      if (ans === '__BUY__') {
+        botReply(BUY_MSG, 800, function() {
+          appendCTABuy();
+          setQuickReplies([
+            { label: '❓ Hỏi thêm câu khác', key: '_back' },
+          ]);
+        });
+        return;
+      }
+
+      if (ans === '__FORM__') {
+        botReply(FORM_MSG, 800, function() {
+          appendCTABuy();
+          setQuickReplies([
+            { label: '❓ Hỏi thêm câu khác', key: '_back' },
+          ]);
+        });
+        return;
+      }
+
+      if (topic.key === '_back') {
+        botReply('Mẹ muốn hỏi thêm gì cứ tự nhiên nha! 😊', 600, function() {
+          setQuickReplies(TOPICS);
+        });
+        return;
+      }
+
+      // Normal Q&A — show answer then offer all topics again + buy
+      botReply(ans.replace(/\n/g, '<br>'), 1000, function() {
+        // After Q&A, show buy prompt after a brief pause
+        setTimeout(function() {
+          if (['q9','q8','q6','q7'].indexOf(topic.key) !== -1) {
+            // These are "decision-close" questions — add soft close
+            botReply('Mẹ muốn hỏi thêm hay đặt mua luôn ạ? 😊', 600, function() {
+              setQuickReplies([
+                { label: '🛒 Đặt mua ngay', key: 'buy' },
+                { label: '📝 Để lại SĐT tư vấn', key: 'form' },
+                { label: '❓ Hỏi câu khác', key: '_back' },
+              ]);
+            });
+          } else {
+            setQuickReplies([
+              { label: '🛒 Đặt mua ngay', key: 'buy' },
+              { label: '❓ Hỏi câu khác', key: '_back' },
+            ]);
+          }
+        }, 200);
+      });
+    }
+
+    function ngSendMessage() {
+      const input = document.getElementById('ng-user-input');
+      if (!input) return;
+      const text = input.value.trim();
+      if (!text || isTyping) return;
+      input.value = '';
+      appendMessage('user', text.replace(/</g,'&lt;').replace(/>/g,'&gt;'));
+      clearQuickReplies();
+
+      // Simple keyword matching
+      const t = text.toLowerCase();
+      var matched = null;
+      if (/(giá|bao nhiêu|tiền|đắt|rẻ|gói)/.test(t)) matched = 'q9';
+      else if (/(hiệu quả|tác dụng|công dụng|cao lên|cm)/.test(t)) matched = 'q1';
+      else if (/(bao lâu|khi nào|lâu không|mấy tháng)/.test(t)) matched = 'q2';
+      else if (/(canxi|canxi rồi|đang uống|thêm không)/.test(t)) matched = 'q3';
+      else if (/(dậy thì|hormone|an toàn|sợ)/.test(t)) matched = 'q4';
+      else if (/(táo bón|tiêu hóa|bụng|nóng trong)/.test(t)) matched = 'q5';
+      else if (/(tuổi|mấy tuổi|nhỏ|6 tuổi|7 tuổi|8 tuổi)/.test(t)) matched = 'q6';
+      else if (/(cách dùng|uống|viên|ngày|liều)/.test(t)) matched = 'q7';
+      else if (/(chính hãng|thật|giả|nhật|nguồn gốc)/.test(t)) matched = 'q8';
+      else if (/(bố|mẹ|thấp|gen|di truyền)/.test(t)) matched = 'q10';
+      else if (/(mua|đặt|order|order ngay)/.test(t)) matched = 'buy';
+      else if (/(form|thông tin|số điện thoại|sdt|để lại)/.test(t)) matched = 'form';
+
+      if (matched) {
+        handleQuickReply({ label: text, key: matched });
+      } else {
+        // Fallback
+        botReply('Cảm ơn mẹ đã nhắn! 😊 Mẹ muốn hỏi về điều gì — em chọn nhanh cho mẹ nha:', 800, function() {
+          setQuickReplies(TOPICS.slice(0, 8));
+        });
+      }
+    }
+
+    /* =============================================
+       OPEN / CLOSE
+    ============================================= */
+    window.ngChatToggle = function() {
+      isOpen = !isOpen;
+      const win = document.getElementById('ng-chat-window');
+      const badge = document.getElementById('ng-chat-badge');
+      if (!win) return;
+      if (isOpen) {
+        win.classList.add('ng-open');
+        if (badge) badge.style.display = 'none';
+        if (!greetedOnce) {
+          greetedOnce = true;
+          setTimeout(function() {
+            botReply(GREETING.replace(/\n/g,'<br>'), 600, function() {
+              setQuickReplies(TOPICS.slice(0,8));
+            });
+          }, 200);
+        }
+        setTimeout(function() {
+          var inp = document.getElementById('ng-user-input');
+          if (inp) inp.focus();
+        }, 300);
+      } else {
+        win.classList.remove('ng-open');
+      }
+    };
+
+    window.ngChatClose = function() {
+      isOpen = false;
+      var win = document.getElementById('ng-chat-window');
+      if (win) win.classList.remove('ng-open');
+    };
+
+    // Show badge after 3s to draw attention
+    setTimeout(function() {
+      var badge = document.getElementById('ng-chat-badge');
+      if (badge && !isOpen) badge.style.display = 'flex';
+    }, 3000);
+
+    // Allow pressing Enter to send
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape' && isOpen) ngChatClose();
+    });
+
+  })();
+  </script>
+
 </body>
 </html>
