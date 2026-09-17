@@ -1743,28 +1743,8 @@
             </p>
           </div>
 
-          <!-- TAB SWITCHER: 2 CHẾ ĐỘ (FORM NATIVE ĐỒNG BỘ GIAO DIỆN & GOOGLE FORM EMBED) -->
-          <div class="flex items-center justify-center p-1.5 rounded-2xl bg-brand-sand border border-brand-gold-300 mb-8 max-w-md mx-auto gap-2">
-            <button 
-              type="button" 
-              id="tabGoogle" 
-              onclick="switchFormTab('google')" 
-              class="flex-1 py-2.5 px-3 rounded-xl font-bold text-xs sm:text-sm bg-brand-cacao-900 text-brand-gold-400 shadow transition-all text-center"
-            >
-              🔗 Biểu Mẫu Google Form (Đang Hiện)
-            </button>
-            <button 
-              type="button" 
-              id="tabNative" 
-              onclick="switchFormTab('native')" 
-              class="flex-1 py-2.5 px-3 rounded-xl font-bold text-xs sm:text-sm bg-white text-brand-cacao-700 hover:bg-brand-ivory border border-brand-gold-300/60 transition-all text-center"
-            >
-              📝 Form Giao Diện Salepage
-            </button>
-          </div>
-
-          <!-- TAB 1: FORM SALEPAGE NATIVE (TỰ ĐỘNG GỬI GOOGLE SHEETS / FORMSPREE / TELEGRAM) -->
-          <form id="orderForm" onsubmit="handleFormSubmit(event)" class="space-y-6 hidden">
+          <!-- FORM ĐẶT HÀNG & THANH TOÁN SEPAY -->
+          <form id="orderForm" onsubmit="handleFormSubmit(event)" class="space-y-6">
             
             <!-- THÔNG TIN LIÊN HỆ PHỤ HUYNH -->
             <div class="p-4 sm:p-5 rounded-2xl bg-brand-cream/60 border border-brand-gold-300 space-y-4">
@@ -1968,49 +1948,6 @@
             </div>
 
           </form>
-
-          <!-- TAB 2: NHÚNG GOOGLE FORM TRỰC TIẾP (EMBED IFRAME) -->
-          <div id="googleFormEmbedContainer" class="space-y-6">
-            
-            <div class="p-4 sm:p-5 rounded-2xl bg-brand-ivory border-2 border-dashed border-brand-gold-400 text-xs sm:text-sm text-brand-cacao-800 space-y-2">
-              <div class="flex items-center gap-2 font-bold text-brand-cacao-900 text-sm sm:text-base">
-                <span>💡</span>
-                <span>Cách nhúng Google Form của riêng bạn (Tự động vào Google Sheets 100%):</span>
-              </div>
-              <ol class="list-decimal pl-5 space-y-1 text-xs text-brand-cacao-700">
-                <li>Truy cập <a href="https://forms.new" target="_blank" class="text-blue-600 underline font-bold">forms.new</a> để tạo Google Form với các câu hỏi tương tự trên.</li>
-                <li>Bấm <strong>Gửi</strong> (Send) ở góc trên bên phải ➔ Chọn tab biểu tượng <strong>&lt; &gt;</strong> (Nhúng HTML).</li>
-                <li>Sao chép đường link trong thuộc tính <code>src="..."</code> và dán thay thế vào thẻ <code>&lt;iframe&gt;</code> bên dưới trong file <code>index.html</code>.</li>
-              </ol>
-            </div>
-
-            <!-- Khung nhúng Google Form Responsive -->
-            <div class="w-full rounded-2xl overflow-hidden border border-brand-gold-300 shadow-md bg-white">
-              <iframe 
-                id="googleFormIframe"
-                src="https://docs.google.com/forms/d/e/1FAIpQLSdROzpmiOhN5FBrfsR0IdHzmZXeNH2ayVjX6yjRd335H7lXRg/viewform?embedded=true" 
-                width="100%" 
-                height="850" 
-                frameborder="0" 
-                marginheight="0" 
-                marginwidth="0"
-                class="w-full"
-              >
-                Đang tải biểu mẫu Google Form...
-              </iframe>
-            </div>
-
-            <div class="text-center">
-              <button 
-                type="button" 
-                onclick="switchFormTab('native')" 
-                class="inline-flex items-center text-xs font-bold text-brand-cacao-800 hover:text-brand-gold-700 underline"
-              >
-                ← Quay lại Form chuẩn giao diện Salepage
-              </button>
-            </div>
-
-          </div>
 
         </div>
 
