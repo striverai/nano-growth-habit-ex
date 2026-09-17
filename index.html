@@ -2312,6 +2312,49 @@
     </div>
   </div>
 
+  <!-- SEPAY QR PAYMENT MODAL -->
+  <div id="sepayQRModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm hidden">
+    <div class="bg-white rounded-3xl p-6 max-w-sm w-full border-2 border-brand-gold-400 shadow-2xl space-y-4">
+      <!-- Header -->
+      <div class="flex items-center justify-between">
+        <h3 class="text-lg font-extrabold text-brand-cacao-900">💳 Quét mã để thanh toán</h3>
+        <button onclick="closeSepayModal()" class="w-8 h-8 flex items-center justify-center rounded-full bg-brand-sand text-brand-cacao-500 hover:bg-brand-gold-100 text-2xl font-bold transition-colors leading-none">×</button>
+      </div>
+      <!-- QR Code Image -->
+      <div class="flex justify-center">
+        <img id="sepayQRImg" src="" alt="QR thanh toán VietQR" class="rounded-xl shadow-md w-full max-w-[230px]" />
+      </div>
+      <!-- Payment Details -->
+      <div class="bg-brand-ivory rounded-2xl p-4 text-sm border border-brand-gold-300 space-y-2.5">
+        <div class="flex justify-between items-center">
+          <span class="text-brand-cacao-600 font-medium">Ngân hàng:</span>
+          <span class="font-bold text-brand-cacao-900">TPBank</span>
+        </div>
+        <div class="flex justify-between items-center">
+          <span class="text-brand-cacao-600 font-medium">Số TK:</span>
+          <span class="font-bold font-mono text-brand-cacao-900 text-xs tracking-wider">00005510675</span>
+        </div>
+        <div class="flex justify-between items-center">
+          <span class="text-brand-cacao-600 font-medium">Số tiền:</span>
+          <span id="sepayAmount" class="font-extrabold text-brand-gold-700 font-mono text-base"></span>
+        </div>
+        <div class="border-t border-brand-gold-200 pt-2 flex justify-between items-center gap-3">
+          <span class="text-brand-cacao-600 font-medium flex-shrink-0">Nội dung CK:</span>
+          <code id="sepayCode" class="font-extrabold text-brand-cacao-900 bg-brand-gold-100 px-2.5 py-1 rounded-lg text-sm break-all border border-brand-gold-300"></code>
+        </div>
+      </div>
+      <!-- Waiting status -->
+      <div class="flex items-center justify-center gap-2.5 text-sm text-brand-cacao-600 py-1">
+        <span class="inline-block w-3 h-3 rounded-full bg-amber-400 animate-pulse flex-shrink-0"></span>
+        <span class="font-medium">Đang chờ xác nhận thanh toán...</span>
+      </div>
+      <p class="text-[11px] text-brand-cacao-400 leading-relaxed text-center">
+        Mở app ngân hàng → Quét mã QR hoặc chuyển khoản đúng <strong>nội dung</strong> và <strong>số tiền</strong> trên.<br>
+        Đơn hàng tự động xác nhận ngay khi nhận được tiền.
+      </p>
+    </div>
+  </div>
+
   <!-- INTERACTIVE JAVASCRIPT -->
   <script>
     // FAQ Accordion Toggle
@@ -2383,6 +2426,29 @@
     const TELEGRAM_BOT_TOKEN = "7966144550:AAEUt6ystZCBFMrZUBXS7lJII6RZjZDNTTY"; // Bot: Huy CEO
     const TELEGRAM_CHAT_ID = "-1004414191458";   // Group: Huy 8
 
+    // =========================================================================
+    // SEPAY PAYMENT CONFIG – Thanh toán chuyển khoản tự động
+    // =========================================================================
+    const SUPABASE_URL = 'https://tuvjisjiinjydgqvbzru.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_Sfq7rfo4kFRf-N12cP3RSw_5qKf-AVE';
+    let sepayPollingInterval = null;
+
+    function getPackageAmount(v) {
+      if (!v) return 1250000;
+      if (v.includes('3.390') || v.includes('3 hộp') || v.includes('Toàn diện')) return 3390000;
+      if (v.includes('2.350') || v.includes('2 hộp') || v.includes('Chuẩn đột phá')) return 2350000;
+      return 1250000;
+    }
+    function getPackageQty(v) {
+      if (!v) return 1;
+      if (v.includes('3 hộp') || v.includes('Toàn diện')) return 3;
+      if (v.includes('2 hộp') || v.includes('Chuẩn đột phá')) return 2;
+      return 1;
+    }
+    function generatePaymentCode() {
+      return 'NANO' + Math.random().toString(36).substring(2, 8).toUpperCase();
+    }
+
     async function handleFormSubmit(e) {
       e.preventDefault();
       
@@ -2397,127 +2463,131 @@
       const growthWorry = document.querySelector('input[name="growthWorry"]:checked')?.value || 'Chưa chọn';
       const growthGoal = document.querySelector('input[name="growthGoal"]:checked')?.value || 'Chưa chọn';
       const previousSupplements = document.querySelector('input[name="previousSupplements"]:checked')?.value || 'Chưa chọn';
-      const selectedPkg = document.querySelector('input[name="packageSelect"]:checked')?.value || 'Gói Chuẩn Đột Phá (2 hộp)';
+      const selectedPkg = document.querySelector('input[name="packageSelect"]:checked')?.value || 'Gói 2: Chuẩn đột phá (2 hộp - 2.350.000đ)';
       const shippingAddress = document.getElementById('shippingAddress')?.value.trim() || '';
       const timestamp = new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
 
-      // 1. Hiển thị trạng thái đang gửi
+      const paymentCode = generatePaymentCode();
+      const amount = getPackageAmount(selectedPkg);
+      const qty = getPackageQty(selectedPkg);
+
+      // Hiển thị loading
       if (submitBtn) submitBtn.disabled = true;
       if (submitBtnSpinner) submitBtnSpinner.classList.remove('hidden');
-      if (submitBtnText) submitBtnText.textContent = "ĐANG GỬI THÔNG TIN ĐẾN HỆ THỐNG...";
+      if (submitBtnText) submitBtnText.textContent = "ĐANG TẠO ĐƠN HÀNG...";
 
-      // 2. Chuẩn bị dữ liệu gửi đi
-      const formData = new FormData();
-      formData.append('timestamp', timestamp);
-      formData.append('parentName', parentName);
-      formData.append('phoneNumber', phone);
-      formData.append('childAgeGender', childAgeGender);
-      formData.append('growthWorry', growthWorry);
-      formData.append('growthGoal', growthGoal);
-      formData.append('previousSupplements', previousSupplements);
-      formData.append('packageSelect', selectedPkg);
-      formData.append('shippingAddress', shippingAddress);
-      formData.append('source', 'Salepage Nano Growth Habit EX');
-
-      // 3. Gửi dữ liệu tới Google Apps Script (tự động lưu vào Google Sheet)
-      if (GOOGLE_SHEETS_SCRIPT_URL && GOOGLE_SHEETS_SCRIPT_URL.startsWith('http')) {
-        try {
-          await fetch(GOOGLE_SHEETS_SCRIPT_URL, {
-            method: 'POST',
-            mode: 'no-cors',
-            body: formData
-          });
-          console.log("Đã gửi đơn hàng thành công vào Google Sheet!");
-        } catch (error) {
-          console.warn("Lỗi kết nối Google Sheet:", error);
-        }
-      }
-
-      // 4. Gửi dữ liệu tới Formspree.io (nếu có cấu hình)
-      if (FORMSPREE_ENDPOINT && FORMSPREE_ENDPOINT.startsWith('http')) {
-        try {
-          await fetch(FORMSPREE_ENDPOINT, {
-            method: 'POST',
-            body: formData,
-            headers: { 'Accept': 'application/json' }
-          });
-          console.log("Đã gửi dữ liệu thành công tới Formspree.io!");
-        } catch (fErr) {
-          console.warn("Lỗi kết nối Formspree:", fErr);
-        }
-      }
-
-      // 5. Bắn thông báo trực tiếp đến Telegram Group
-      if (TELEGRAM_BOT_TOKEN && TELEGRAM_CHAT_ID) {
-        function escapeHtml(str) {
-          if (!str) return '';
-          return str.toString()
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;");
-        }
-
-        const teleMsg = `🔔 <b>CÓ KHẢO SÁT & ĐƠN HÀNG MỚI - NANO GROWTH!</b>
-`
-          + `━━━━━━━━━━━━━━━━━━
-`
-          + `👤 <b>Phụ huynh:</b> ${escapeHtml(parentName)}
-`
-          + `📞 <b>Số điện thoại / Zalo:</b> <code>${escapeHtml(phone)}</code>
-`
-          + `👶 <b>Tuổi & Giới tính bé:</b> ${escapeHtml(childAgeGender)}
-`
-          + `⚠️ <b>Trăn trở nhất:</b> ${escapeHtml(growthWorry)}
-`
-          + `🎯 <b>Mục tiêu 3-6 tháng:</b> ${escapeHtml(growthGoal)}
-`
-          + `💊 <b>Đã dùng giải pháp:</b> ${escapeHtml(previousSupplements)}
-`
-          + `📦 <b>Gói lựa chọn:</b> <b>${escapeHtml(selectedPkg)}</b>
-`
-          + `📍 <b>Địa chỉ:</b> ${escapeHtml(shippingAddress) || 'Chưa cung cấp'}
-`
-          + `⏰ <b>Thời gian:</b> ${timestamp}
-`
-          + `━━━━━━━━━━━━━━━━━━
-`
-          + `👉 <i>Dược sĩ chuyên môn hãy liên hệ tư vấn lộ trình ngay!</i>`;
-
-        const teleParams = new URLSearchParams({
-          chat_id: TELEGRAM_CHAT_ID,
-          text: teleMsg,
-          parse_mode: 'HTML'
+      // Tạo đơn hàng trong Supabase (status: pending)
+      let orderId = null;
+      try {
+        const resp = await fetch(`${SUPABASE_URL}/rest/v1/orders`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            'Prefer': 'return=representation'
+          },
+          body: JSON.stringify({
+            customer_name: parentName,
+            customer_phone: phone,
+            customer_address: shippingAddress || childAgeGender,
+            product_name: 'Nano Growth Habit EX',
+            quantity: qty,
+            amount: amount,
+            payment_code: paymentCode,
+            status: 'pending'
+          })
         });
-        const teleUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage?` + teleParams.toString();
-        
-        try {
-          const teleResp = await fetch(teleUrl, { method: 'GET' });
-          const teleResult = await teleResp.json();
-          console.log("Kết quả gửi Telegram:", teleResult);
-        } catch (teleErr) {
-          console.warn("Thử gửi qua Image beacon fallback:", teleErr);
-          const imgBeacon = new Image();
-          imgBeacon.src = teleUrl;
+        if (!resp.ok) {
+          const errText = await resp.text();
+          throw new Error('Supabase ' + resp.status + ': ' + errText);
         }
+        const orders = await resp.json();
+        orderId = orders[0]?.id;
+      } catch (err) {
+        console.error('Lỗi tạo đơn hàng:', err);
+        if (submitBtn) submitBtn.disabled = false;
+        if (submitBtnSpinner) submitBtnSpinner.classList.add('hidden');
+        if (submitBtnText) submitBtnText.textContent = "GỬI KHẢO SÁT & NHẬN TƯ VẤN LỘ TRÌNH NGAY";
+        alert('Không thể tạo đơn hàng. Vui lòng kiểm tra kết nối và thử lại!');
+        return;
       }
 
-      // 6. Khôi phục nút bấm
+      // Reset nút
       if (submitBtn) submitBtn.disabled = false;
       if (submitBtnSpinner) submitBtnSpinner.classList.add('hidden');
       if (submitBtnText) submitBtnText.textContent = "GỬI KHẢO SÁT & NHẬN TƯ VẤN LỘ TRÌNH NGAY";
 
-      // 7. Hiển thị Popup xác nhận khảo sát thành công
-      const modal = document.getElementById('successModal');
-      const message = document.getElementById('modalMessage');
-      if (message) {
-        message.innerHTML = `Cảm ơn phụ huynh <strong>${parentName}</strong> (${phone})!<br/><br/>Hệ thống đã ghi nhận đầy đủ câu trả lời khảo sát và nhu cầu <strong>${selectedPkg}</strong>. Dược sĩ chuyên môn Nichiei Asia sẽ liên hệ qua Zalo / điện thoại sớm nhất để phân tích và gửi tặng lộ trình tăng trưởng riêng cho bé!`;
+      // Thông báo Telegram – đơn đang chờ thanh toán
+      if (TELEGRAM_BOT_TOKEN && TELEGRAM_CHAT_ID) {
+        const esc = s => (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        const msg = `🛒 <b>ĐƠN MỚI – CHỜ THANH TOÁN SEPAY</b>\n━━━━━━━━━━━━━━━━━━\n👤 ${esc(parentName)}\n📞 <code>${esc(phone)}</code>\n📦 ${esc(selectedPkg)}\n💰 ${amount.toLocaleString('vi-VN')}đ\n🔑 Mã CK: <code>${paymentCode}</code>\n📍 ${esc(shippingAddress)||'–'}\n👶 ${esc(childAgeGender)||'–'}\n⏰ ${timestamp}\n━━━━━━━━━━━━━━━━━━\n⏳ <i>Đang chờ khách chuyển khoản...</i>`;
+        const params = new URLSearchParams({ chat_id: TELEGRAM_CHAT_ID, text: msg, parse_mode: 'HTML' });
+        fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage?${params}`, { method: 'GET' }).catch(() => {});
       }
-      if (modal) modal.classList.remove('hidden');
-      document.getElementById('orderForm').reset();
+
+      // Hiển thị QR thanh toán và bắt đầu polling
+      showSepayQR(paymentCode, amount, parentName, phone, orderId);
     }
 
     function closeModal() {
       document.getElementById('successModal').classList.add('hidden');
+    }
+
+    // =========================================================================
+    // SEPAY: Hiển thị QR, Polling trạng thái, Xác nhận thanh toán
+    // =========================================================================
+
+    function showSepayQR(paymentCode, amount, name, phone, orderId) {
+      const modal = document.getElementById('sepayQRModal');
+      if (!modal) return;
+      const qrUrl = `https://vietqr.app/img?acc=00005510675&bank=TPBank&amount=${amount}&des=${paymentCode}&template=compact`;
+      document.getElementById('sepayQRImg').src = qrUrl;
+      document.getElementById('sepayAmount').textContent = amount.toLocaleString('vi-VN') + 'đ';
+      document.getElementById('sepayCode').textContent = paymentCode;
+      modal.classList.remove('hidden');
+      startSepayPolling(orderId, name, phone, paymentCode, amount);
+    }
+
+    function startSepayPolling(orderId, name, phone, paymentCode, amount) {
+      if (sepayPollingInterval) clearInterval(sepayPollingInterval);
+      let tries = 0;
+      const MAX = 120; // 6 phút (120 × 3s)
+      sepayPollingInterval = setInterval(async () => {
+        tries++;
+        if (tries > MAX) { clearInterval(sepayPollingInterval); return; }
+        try {
+          const r = await fetch(
+            `${SUPABASE_URL}/rest/v1/orders?id=eq.${orderId}&select=status`,
+            { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } }
+          );
+          const data = await r.json();
+          if (data?.[0]?.status === 'success') {
+            clearInterval(sepayPollingInterval);
+            onPaymentSuccess(name, phone, paymentCode, amount);
+          }
+        } catch (err) { console.warn('Sepay polling:', err); }
+      }, 3000);
+    }
+
+    function onPaymentSuccess(name, phone, paymentCode, amount) {
+      document.getElementById('sepayQRModal')?.classList.add('hidden');
+      document.getElementById('orderForm')?.reset();
+      if (TELEGRAM_BOT_TOKEN && TELEGRAM_CHAT_ID) {
+        const esc = s => (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        const msg = `✅ <b>THANH TOÁN THÀNH CÔNG – SEPAY!</b>\n━━━━━━━━━━━━━━━━━━\n👤 ${esc(name)}\n📞 <code>${esc(phone)}</code>\n💰 ${amount.toLocaleString('vi-VN')}đ\n🔑 <code>${paymentCode}</code>\n━━━━━━━━━━━━━━━━━━\n🚀 <i>Xác nhận và giao hàng ngay!</i>`;
+        const params = new URLSearchParams({ chat_id: TELEGRAM_CHAT_ID, text: msg, parse_mode: 'HTML' });
+        fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage?${params}`, { method: 'GET' }).catch(() => {});
+      }
+      const successModal = document.getElementById('successModal');
+      const message = document.getElementById('modalMessage');
+      if (message) message.innerHTML = `🎉 Thanh toán thành công!<br><br>Cảm ơn <strong>${name}</strong> đã đặt hàng <strong>Nano Growth Habit EX</strong>! Chúng tôi sẽ xác nhận và giao hàng đến bạn trong thời gian sớm nhất.<br><br>📋 Mã đơn: <code style="font-size:13px;background:#fef3c7;padding:2px 8px;border-radius:6px">${paymentCode}</code>`;
+      if (successModal) successModal.classList.remove('hidden');
+    }
+
+    function closeSepayModal() {
+      document.getElementById('sepayQRModal')?.classList.add('hidden');
+      if (sepayPollingInterval) clearInterval(sepayPollingInterval);
     }
   </script>
 
