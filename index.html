@@ -1556,7 +1556,7 @@
               <div class="my-5 p-4 rounded-2xl bg-brand-cream/60 border border-brand-sand">
                 <span class="block text-xs line-through text-brand-cacao-600 font-medium">Giá gốc: 1.650.000đ</span>
                 <div class="flex items-baseline gap-2">
-                  <span class="text-2xl sm:text-3xl font-black text-brand-cacao-900">1.000đ</span>
+                  <span class="text-2xl sm:text-3xl font-black text-brand-cacao-900">2.000đ</span>
                   <span class="text-xs font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded">Tiết kiệm 400.000đ</span>
                 </div>
                 <div class="mt-1 text-[11px] font-bold text-brand-gold-800">
@@ -1892,13 +1892,13 @@
               <div class="space-y-2.5">
                 <label class="flex items-center justify-between p-3.5 rounded-xl border-2 border-brand-sand hover:border-brand-gold-400 cursor-pointer transition-colors bg-brand-cream/30 has-[:checked]:border-brand-gold-600 has-[:checked]:bg-brand-ivory">
                   <div class="flex items-center space-x-3">
-                    <input type="radio" name="packageSelect" value="Gói 1: Trải nghiệm (1 hộp - 1.000đ)" class="w-4 h-4 text-brand-gold-600 focus:ring-brand-gold-500" />
+                    <input type="radio" name="packageSelect" value="Gói 1: Trải nghiệm (1 hộp - 2.000đ)" class="w-4 h-4 text-brand-gold-600 focus:ring-brand-gold-500" />
                     <div>
                       <span class="font-bold text-xs sm:text-sm text-brand-cacao-900 block">Gói Trải Nghiệm – 1 Hộp (120 viên)</span>
                       <span class="text-[11px] text-brand-cacao-600">Dùng trong ~2 tháng • Miễn phí vận chuyển</span>
                     </div>
                   </div>
-                  <strong class="text-xs sm:text-sm text-brand-cacao-900 font-mono">1.000đ</strong>
+                  <strong class="text-xs sm:text-sm text-brand-cacao-900 font-mono">2.000đ</strong>
                 </label>
 
                 <label class="flex items-center justify-between p-3.5 rounded-xl border-2 border-brand-gold-500 cursor-pointer transition-colors bg-brand-ivory has-[:checked]:border-brand-cacao-900 has-[:checked]:bg-brand-gold-50">
@@ -2434,10 +2434,10 @@
     let sepayPollingInterval = null;
 
     function getPackageAmount(v) {
-      if (!v) return 1000;
+      if (!v) return 2000;
       if (v.includes('3.390') || v.includes('3 hộp') || v.includes('Toàn diện')) return 3390000;
       if (v.includes('2.350') || v.includes('2 hộp') || v.includes('Chuẩn đột phá')) return 2350000;
-      return 1000;
+      return 2000;
     }
     function getPackageQty(v) {
       if (!v) return 1;
