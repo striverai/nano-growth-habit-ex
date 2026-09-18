@@ -16,7 +16,7 @@ Tích hợp Email Marketing & Automation chăm sóc khách hàng tự động qu
 
 ⚡ Đăng ký waitlist: Vừa bấm gửi xong, chuỗi 3 email nuôi dưỡng (Welcome, Kiến thức khoa học chiều cao chuẩn Nhật, Ưu đãi đặc quyền) được kích hoạt ngay lập tức.
 ⚡ Xác nhận đơn hàng: Đơn vừa tạo trên trang quản trị, hệ thống tự động gửi hóa đơn điện tử + mã vận đơn + hướng dẫn nhận hàng & đồng kiểm vào email của ba mẹ sau 2 giây.
-⚡ Tỷ lệ vào Inbox chính gần như 100%: Nhờ verify toàn bộ hạ tầng kỹ thuật (DKIM, SPF, DMARC) với custom domain riêng (contact@striver.ai.vn), hoàn toàn không lo bị rơi vào tab Spam hay Promotion.
+⚡ Tỷ lệ vào Inbox chính gần như 100%: Nhờ verify toàn bộ hạ tầng kỹ thuật (DKIM, SPF, DMARC) với custom domain riêng (cskh@hnkt.vn), hoàn toàn không lo bị rơi vào tab Spam hay Promotion.
 
 Toàn bộ quy trình từ setup API, code serverless function, thiết kế chuỗi kịch bản cá nhân hóa đến kết nối CRM... đều được hỗ trợ xây dựng trọn vẹn trong một buổi làm việc với AI.
 

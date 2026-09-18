@@ -1,6 +1,6 @@
-﻿# CHUỖI EMAIL CHĂM SÓC TỰ ĐỘNG (EMAIL SEQUENCE) — NANO GROWTH EX
+# CHUỖI EMAIL CHĂM SÓC TỰ ĐỘNG (EMAIL SEQUENCE) — NANO GROWTH EX
 
-> **Người gửi:** Nano Growth EX <contact@striver.ai.vn>  
+> **Người gửi:** Nano Growth EX <cskh@hnkt.vn>  
 > **Brand Voice:** Thẳng thắn, thực chiến, gãy gọn, gần gũi, không sáo rỗng.  
 > **Target Audience:** Ba mẹ có con từ 3 - 18 tuổi đang trong giai đoạn vàng phát triển chiều cao.
 

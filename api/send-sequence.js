@@ -1,7 +1,7 @@
-﻿const https = require('https');
+const https = require('https');
 
-const SENDER = 'Nano Growth EX <contact@striver.ai.vn>';
-const defaultKey = Buffer.from('cmVfaEZmaHdydnlfRzFCQlFpUloxdER1azlzMktuazVKUDlR', 'base64').toString('utf-8');
+const SENDER = 'Nano Growth EX <cskh@hnkt.vn>';
+const defaultKey = Buffer.from('cmVfUVVzVGN1MWFfREJaeDE3eWRpc3Q0SksyTTc0NkIxMldU', 'base64').toString('utf-8');
 const RESEND_API_KEY = process.env.RESEND_API_KEY || defaultKey;
 
 function sendOneEmail(to, subject, html, scheduledAt) {
