@@ -1,26 +1,31 @@
 ﻿module.exports = async (req, res) => {
   try {
-    // CORS headers
     res.setHeader(Access-Control-Allow-Origin, *);
     res.setHeader(Access-Control-Allow-Methods, POST, OPTIONS);
     res.setHeader(Access-Control-Allow-Headers, Content-Type);
 
     if (req.method === OPTIONS) {
-      return res.status(200).end();
+      res.statusCode = 200;
+      return res.end();
     }
 
-    if (req.method !== POST) {
-      return res.status(405).json({ error: Method Not Allowed });
-    }
-
+    // Read body buffer safely
     let body = req.body;
-    if (typeof body === string) {
-      try { body = JSON.parse(body); } catch(e) {}
+    if (!body || typeof body !== object) {
+      const chunks = [];
+      for await (const chunk of req) {
+        chunks.push(typeof chunk === string ? Buffer.from(chunk) : chunk);
+      }
+      const raw = Buffer.concat(chunks).toString(utf-8);
+      try { body = JSON.parse(raw); } catch(e) { body = {}; }
     }
+
     const { to, subject, html, text, from } = body || {};
 
     if (!to || !subject || (!html && !text)) {
-      return res.status(400).json({ error: Missing required fields: to, subject, content });
+      res.statusCode = 400;
+      res.setHeader(Content-Type, application/json);
+      return res.end(JSON.stringify({ error: Missing required fields: to, subject, content }));
     }
 
     const defaultKey = Buffer.from(cmVfaEZmaHdydnlfRzFCQlFpUlowdER1azlzMktuazVKUDlR, base64).toString(utf-8);
@@ -37,18 +42,18 @@
       body: JSON.stringify({
         from: SENDER,
         to: Array.isArray(to) ? to : [to],
-        subject,
+        subject: subject,
         html: html || <p></p>
       })
     });
 
     const data = await response.json();
-    if (!response.ok) {
-      return res.status(response.status).json(data);
-    }
-
-    return res.status(200).json({ success: true, data });
+    res.statusCode = response.ok ? 200 : response.status;
+    res.setHeader(Content-Type, application/json);
+    return res.end(JSON.stringify({ success: response.ok, data }));
   } catch (err) {
-    return res.status(500).json({ error: err.message, stack: err.stack });
+    res.statusCode = 500;
+    res.setHeader(Content-Type, application/json);
+    return res.end(JSON.stringify({ error: err.message, stack: err.stack }));
   }
 };
