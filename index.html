@@ -1751,7 +1751,7 @@
               <span class="text-xs font-bold uppercase tracking-wider text-brand-gold-800 block">
                 1. Thông tin liên hệ Ba / Mẹ
               </span>
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <label class="block text-xs sm:text-sm font-bold text-brand-cacao-900 mb-1.5" for="parentName">
                     Họ và tên Ba/Mẹ <span class="text-red-600">*</span>
@@ -1776,6 +1776,20 @@
                     name="phoneNumber" 
                     required 
                     placeholder="Ví dụ: 0987 654 321" 
+                    class="w-full px-4 py-3 rounded-xl border border-brand-gold-300 focus:outline-none focus:ring-2 focus:ring-brand-gold-500 text-xs sm:text-sm bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label class="block text-xs sm:text-sm font-bold text-brand-cacao-900 mb-1.5" for="parentEmail">
+                    Địa chỉ Email <span class="text-red-600">*</span>
+                  </label>
+                  <input 
+                    type="email" 
+                    id="parentEmail" 
+                    name="parentEmail" 
+                    required 
+                    placeholder="Ví dụ: mainguyen@gmail.com" 
                     class="w-full px-4 py-3 rounded-xl border border-brand-gold-300 focus:outline-none focus:ring-2 focus:ring-brand-gold-500 text-xs sm:text-sm bg-white"
                   />
                 </div>
@@ -2396,6 +2410,7 @@
       // Đọc thông tin từ form
       const parentName = document.getElementById('parentName')?.value.trim() || '';
       const phone = document.getElementById('phoneNumber')?.value.trim() || '';
+      const email = document.getElementById('parentEmail')?.value.trim() || '';
       const childAgeGender = document.getElementById('childAgeGender')?.value.trim() || '';
       const growthWorry = document.querySelector('input[name="growthWorry"]:checked')?.value || 'Chưa chọn';
       const growthGoal = document.querySelector('input[name="growthGoal"]:checked')?.value || 'Chưa chọn';
@@ -2427,6 +2442,7 @@
           body: JSON.stringify({
             customer_name: parentName,
             customer_phone: phone,
+            customer_email: email,
             customer_address: shippingAddress || childAgeGender,
             product_name: 'Nano Growth Habit EX',
             quantity: qty,
