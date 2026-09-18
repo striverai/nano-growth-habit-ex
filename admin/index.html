@@ -893,10 +893,15 @@ CREATE POLICY IF NOT EXISTS "anon_all_customers" ON customers FOR ALL TO anon US
       let added = 0;
       ordersCache.forEach(o => {
         if (o.customer_phone && !map.has(o.customer_phone)) {
+          let extractedEmail = o.customer_email || '';
+          if (!extractedEmail && o.customer_address && o.customer_address.includes('Email: ')) {
+            const m = o.customer_address.match(/Email:\s*([^\s|]+)/);
+            if (m) extractedEmail = m[1];
+          }
           const item = {
             id: map.size + 1,
             name: o.customer_name || 'Khách đặt hàng',
-            email: o.customer_email || '',
+            email: extractedEmail,
             phone: o.customer_phone,
             zalo: o.customer_phone,
             registered_at: o.created_at || new Date().toISOString(),

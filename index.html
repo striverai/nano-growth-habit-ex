@@ -2442,8 +2442,7 @@
           body: JSON.stringify({
             customer_name: parentName,
             customer_phone: phone,
-            customer_email: email,
-            customer_address: shippingAddress || childAgeGender,
+            customer_address: (shippingAddress || childAgeGender) + (email ? ' | Email: ' + email : ''),
             product_name: 'Nano Growth Habit EX',
             quantity: qty,
             amount: amount,
