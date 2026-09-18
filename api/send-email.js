@@ -1,4 +1,4 @@
-﻿export default async function handler(req, res) {
+﻿module.exports = async (req, res) => {
   // CORS headers
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -16,7 +16,12 @@
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
-  const { to, subject, html, text, from } = req.body || {};
+  // Parse body if it is a string
+  let body = req.body;
+  if (typeof body === 'string') {
+    try { body = JSON.parse(body); } catch(e) {}
+  }
+  const { to, subject, html, text, from } = body || {};
 
   if (!to || !subject || (!html && !text)) {
     return res.status(400).json({ error: 'Missing required fields: to, subject, content' });
@@ -52,4 +57,4 @@
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
-}
+};
