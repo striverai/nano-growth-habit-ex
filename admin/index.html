@@ -232,6 +232,11 @@
         </div>
 
         <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Email khách hàng (để gửi email xác nhận tự động qua Resend)</label>
+          <input type="email" id="o-cust-email" placeholder="khachhang@gmail.com" class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-amber-500 outline-none" />
+        </div>
+
+        <div>
           <label class="block text-xs font-bold text-slate-700 mb-1">Gói sản phẩm *</label>
           <select id="o-product-select" onchange="onProductChange()" class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-amber-500 outline-none bg-white font-medium">
             <option value="Nano Growth Habit EX - Gói 1 (1 hộp)" data-price="1250000" data-qty="1" data-type="physical">Gói 1: Trải nghiệm (1 hộp - 1.250.000đ)</option>
@@ -596,6 +601,7 @@ CREATE POLICY IF NOT EXISTS "anon_all_customers" ON customers FOR ALL TO anon US
     function openOrderModal() {
       document.getElementById('form-order').reset();
       document.getElementById('o-id').value = '';
+      document.getElementById('o-cust-email').value = '';
       document.getElementById('o-status').value = 'pending';
       onProductChange();
       document.getElementById('modal-order').classList.remove('hidden');
@@ -636,16 +642,20 @@ CREATE POLICY IF NOT EXISTS "anon_all_customers" ON customers FOR ALL TO anon US
       const qty = parseInt(document.getElementById('o-quantity').value || 1);
       const amount = parseInt(document.getElementById('o-amount').value || 0);
       const status = document.getElementById('o-status').value;
+      const custEmail = document.getElementById('o-cust-email')?.value.trim() || '';
       let code = document.getElementById('o-code').value.trim();
       if (!code) {
         const rand = Math.random().toString(36).substring(2, 8).toUpperCase();
         code = `NANO${rand}`;
       }
 
+      const rawAddr = document.getElementById('o-cust-addr').value.trim();
+      const combinedAddr = rawAddr + (custEmail ? (rawAddr ? ' | Email: ' : 'Email: ') + custEmail : '');
+
       const payload = {
         customer_name: document.getElementById('o-cust-name').value.trim(),
         customer_phone: document.getElementById('o-cust-phone').value.trim(),
-        customer_address: document.getElementById('o-cust-addr').value.trim() || null,
+        customer_address: combinedAddr || null,
         product_name: pName,
         quantity: qty,
         amount: amount,
@@ -660,6 +670,28 @@ CREATE POLICY IF NOT EXISTS "anon_all_customers" ON customers FOR ALL TO anon US
           body: JSON.stringify(payload)
         });
         if (!res.ok) throw new Error('Không thể tạo đơn hàng trên Supabase');
+
+        // Gửi email xác nhận đơn hàng qua Resend tự động nếu có email
+        if (custEmail) {
+          fetch('/api/send-order-confirmation', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              customer_name: payload.customer_name,
+              customer_email: custEmail,
+              customer_phone: payload.customer_phone,
+              customer_address: rawAddr,
+              product_name: pName,
+              quantity: qty,
+              amount: amount,
+              payment_code: code,
+              status: status
+            })
+          }).then(r => r.json()).then(respData => {
+            console.log('Order confirmation email sent:', respData);
+            showToast('Đã gửi email xác nhận đơn hàng đến ' + custEmail);
+          }).catch(errEmail => console.warn('Lỗi gửi email xác nhận:', errEmail));
+        }
 
         // QUY TẮC: Nếu sản phẩm vật lý -> tự động trừ tồn kho nếu có bảng products
         if (pType === 'physical' && productsCache.length) {
