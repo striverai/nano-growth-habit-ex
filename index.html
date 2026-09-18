@@ -2471,6 +2471,17 @@
       if (submitBtnSpinner) submitBtnSpinner.classList.add('hidden');
       if (submitBtnText) submitBtnText.textContent = "GỬI KHẢO SÁT & NHẬN TƯ VẤN LỘ TRÌNH NGAY";
 
+      // Tự động gửi Email Sequence qua Resend (Email 1 ngay lập tức, nếu có +test thì gửi cả 3 email)
+      if (email) {
+        fetch('/api/send-sequence', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: parentName, email: email })
+        }).then(r => r.json()).then(res => {
+          console.log('Sequence Email dispatched:', res);
+        }).catch(err => console.warn('Lỗi gửi sequence email:', err));
+      }
+
       // Thông báo Telegram – đơn đang chờ thanh toán
       if (TELEGRAM_BOT_TOKEN && TELEGRAM_CHAT_ID) {
         const esc = s => (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
