@@ -1,0 +1,30 @@
+📨 "Khách vừa điền form xong lúc 12h đêm... email đã vào ngay hộp thư chính sau 2 giây."
+
+---
+
+Trước đây khi làm kinh doanh, nỗi sợ lớn nhất là "rơi rớt khách".
+
+Khách đăng ký quan tâm hoặc chốt đơn lúc nửa đêm, sáng hôm sau bận rộn cả mớ việc mới sực nhớ ra gọi lại thì... cảm xúc và nhu cầu của khách đã nguội mất một nửa.
+
+Mà với các ba mẹ đang nóng lòng tìm giải pháp chiều cao cho con, sự chờ đợi đó lại càng gây hoang mang hơn.
+
+---
+
+Hôm nay, hệ thống của Nano Growth Habit EX vừa chính thức hoàn thiện thêm một mắt xích tự động cực kỳ quan trọng:
+
+Tích hợp Email Marketing & Automation chăm sóc khách hàng tự động qua Resend:
+
+⚡ Đăng ký waitlist: Vừa bấm gửi xong, chuỗi 3 email nuôi dưỡng (Welcome, Kiến thức khoa học chiều cao chuẩn Nhật, Ưu đãi đặc quyền) được kích hoạt ngay lập tức.
+⚡ Xác nhận đơn hàng: Đơn vừa tạo trên trang quản trị, hệ thống tự động gửi hóa đơn điện tử + mã vận đơn + hướng dẫn nhận hàng & đồng kiểm vào email của ba mẹ sau 2 giây.
+⚡ Tỷ lệ vào Inbox chính gần như 100%: Nhờ verify toàn bộ hạ tầng kỹ thuật (DKIM, SPF, DMARC) với custom domain riêng (contact@striver.ai.vn), hoàn toàn không lo bị rơi vào tab Spam hay Promotion.
+
+Toàn bộ quy trình từ setup API, code serverless function, thiết kế chuỗi kịch bản cá nhân hóa đến kết nối CRM... đều được hỗ trợ xây dựng trọn vẹn trong một buổi làm việc với AI.
+
+---
+
+Tự động hóa không phải để "lười đi", mà là để khách hàng của mình được chăm sóc chu đáo, chuyên nghiệp và đúng lúc nhất — kể cả khi đội ngũ đang ngủ.
+
+Ba mẹ và anh em quan tâm trải nghiệm thử hệ thống tự động hóa này có thể ghé website tại đây nhé:
+👉 https://nano.hnkt.vn
+
+#Automation #EmailMarketing #Resend #NanoGrowthEX #Solopreneur #AIWorkflow #BuildingInPublic
