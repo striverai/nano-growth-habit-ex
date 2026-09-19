@@ -2,3 +2,11 @@
 .vercelignore
 build_salepage.py
 extracted_copywriting.txt
+.env
+.env.local
+.env.*.local
+*.backup
+*.db.backup
+brain_backup_*.db
+resend_config.txt
+

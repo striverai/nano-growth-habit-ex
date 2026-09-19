@@ -1776,8 +1776,9 @@
                     name="phoneNumber" 
                     required 
                     placeholder="Ví dụ: 0987 654 321" 
-                    class="w-full px-4 py-3 rounded-xl border border-brand-gold-300 focus:outline-none focus:ring-2 focus:ring-brand-gold-500 text-xs sm:text-sm bg-white"
+                    class="w-full px-4 py-3 rounded-xl border border-brand-gold-300 focus:outline-none focus:ring-2 focus:ring-brand-gold-500 text-xs sm:text-sm bg-white transition-colors"
                   />
+                  <p id="phoneError" class="text-red-600 text-[11px] font-semibold mt-1 hidden"></p>
                 </div>
 
                 <div>
@@ -1790,8 +1791,9 @@
                     name="parentEmail" 
                     required 
                     placeholder="Ví dụ: mainguyen@gmail.com" 
-                    class="w-full px-4 py-3 rounded-xl border border-brand-gold-300 focus:outline-none focus:ring-2 focus:ring-brand-gold-500 text-xs sm:text-sm bg-white"
+                    class="w-full px-4 py-3 rounded-xl border border-brand-gold-300 focus:outline-none focus:ring-2 focus:ring-brand-gold-500 text-xs sm:text-sm bg-white transition-colors"
                   />
+                  <p id="emailError" class="text-red-600 text-[11px] font-semibold mt-1 hidden"></p>
                 </div>
               </div>
             </div>
@@ -2373,9 +2375,71 @@
     // Cách 2: (Tùy chọn) Dán URL Formspree.io (ví dụ: https://formspree.io/f/xbjvkqwe)
     const FORMSPREE_ENDPOINT = ""; 
 
-    // Cách 3: Bắn thông báo trực tiếp đến Telegram Group (Đã thiết lập sẵn)
-    const TELEGRAM_BOT_TOKEN = "7966144550:AAEUt6ystZCBFMrZUBXS7lJII6RZjZDNTTY"; // Bot: Huy CEO
-    const TELEGRAM_CHAT_ID = "-1004414191458";   // Group: Huy 8
+    // Cách 3: Bắn thông báo Telegram (Gửi qua Serverless API bảo mật, không lộ token)
+    function sendTelegramAlert(msg) {
+      fetch('/api/send-telegram', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: msg, parse_mode: 'HTML' })
+      }).catch(err => console.warn('Telegram API fallback:', err));
+    }
+
+    // =========================================================================
+    // VALIDATION SỐ ĐIỆN THOẠI & EMAIL
+    // =========================================================================
+    function cleanPhoneNumber(phone) {
+      if (!phone) return '';
+      return phone.replace(/[\s\.\-\(\)]/g, '');
+    }
+
+    function isValidVNPhone(phone) {
+      const cleaned = cleanPhoneNumber(phone);
+      // Hỗ trợ đầu số 03, 05, 07, 08, 09 hoặc +84 / 84
+      return /^(0|\+?84)(3|5|7|8|9)[0-9]{8}$/.test(cleaned);
+    }
+
+    function isValidEmail(email) {
+      if (!email) return false;
+      return /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email.trim());
+    }
+
+    // Gắn sự kiện validate theo thời gian thực (real-time feedback)
+    document.addEventListener('DOMContentLoaded', () => {
+      const phoneInput = document.getElementById('phoneNumber');
+      const emailInput = document.getElementById('parentEmail');
+      const phoneErr = document.getElementById('phoneError');
+      const emailErr = document.getElementById('emailError');
+
+      if (phoneInput && phoneErr) {
+        phoneInput.addEventListener('input', () => {
+          phoneErr.classList.add('hidden');
+          phoneInput.classList.remove('border-red-500');
+        });
+        phoneInput.addEventListener('blur', () => {
+          const val = phoneInput.value.trim();
+          if (val && !isValidVNPhone(val)) {
+            phoneErr.textContent = '⚠️ Số điện thoại không hợp lệ! Vui lòng nhập đúng 10 số (VD: 0987 654 321).';
+            phoneErr.classList.remove('hidden');
+            phoneInput.classList.add('border-red-500');
+          }
+        });
+      }
+
+      if (emailInput && emailErr) {
+        emailInput.addEventListener('input', () => {
+          emailErr.classList.add('hidden');
+          emailInput.classList.remove('border-red-500');
+        });
+        emailInput.addEventListener('blur', () => {
+          const val = emailInput.value.trim();
+          if (val && !isValidEmail(val)) {
+            emailErr.textContent = '⚠️ Địa chỉ email chưa đúng định dạng (VD: example@gmail.com).';
+            emailErr.classList.remove('hidden');
+            emailInput.classList.add('border-red-500');
+          }
+        });
+      }
+    });
 
     // =========================================================================
     // SEPAY PAYMENT CONFIG – Thanh toán chuyển khoản tự động
@@ -2409,8 +2473,45 @@
       
       // Đọc thông tin từ form
       const parentName = document.getElementById('parentName')?.value.trim() || '';
-      const phone = document.getElementById('phoneNumber')?.value.trim() || '';
+      const rawPhone = document.getElementById('phoneNumber')?.value.trim() || '';
       const email = document.getElementById('parentEmail')?.value.trim() || '';
+      const phoneInput = document.getElementById('phoneNumber');
+      const emailInput = document.getElementById('parentEmail');
+      const phoneErr = document.getElementById('phoneError');
+      const emailErr = document.getElementById('emailError');
+
+      // ── VALIDATION BẮT BUỘC TRƯỚC KHI TẠO ĐƠN ──
+      let hasError = false;
+
+      if (!isValidVNPhone(rawPhone)) {
+        if (phoneErr) {
+          phoneErr.textContent = '⚠️ Số điện thoại không hợp lệ! Vui lòng nhập đúng 10 số (VD: 0987 654 321 hoặc 03x, 07x, 08x).';
+          phoneErr.classList.remove('hidden');
+        }
+        if (phoneInput) {
+          phoneInput.classList.add('border-red-500');
+          phoneInput.focus();
+        }
+        hasError = true;
+      }
+
+      if (!isValidEmail(email)) {
+        if (emailErr) {
+          emailErr.textContent = '⚠️ Địa chỉ email chưa đúng định dạng! Vui lòng kiểm tra lại (VD: mainguyen@gmail.com).';
+          emailErr.classList.remove('hidden');
+        }
+        if (emailInput) {
+          emailInput.classList.add('border-red-500');
+          if (!hasError) emailInput.focus();
+        }
+        hasError = true;
+      }
+
+      if (hasError) {
+        return; // Dừng lại không tạo đơn để bảo toàn data khách hàng
+      }
+
+      const phone = cleanPhoneNumber(rawPhone);
       const childAgeGender = document.getElementById('childAgeGender')?.value.trim() || '';
       const growthWorry = document.querySelector('input[name="growthWorry"]:checked')?.value || 'Chưa chọn';
       const growthGoal = document.querySelector('input[name="growthGoal"]:checked')?.value || 'Chưa chọn';
@@ -2481,13 +2582,10 @@
         }).catch(err => console.warn('Lỗi gửi sequence email:', err));
       }
 
-      // Thông báo Telegram – đơn đang chờ thanh toán
-      if (TELEGRAM_BOT_TOKEN && TELEGRAM_CHAT_ID) {
-        const esc = s => (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-        const msg = `🛒 <b>ĐƠN MỚI – CHỜ THANH TOÁN SEPAY</b>\n━━━━━━━━━━━━━━━━━━\n👤 ${esc(parentName)}\n📞 <code>${esc(phone)}</code>\n📦 ${esc(selectedPkg)}\n💰 ${amount.toLocaleString('vi-VN')}đ\n🔑 Mã CK: <code>${paymentCode}</code>\n📍 ${esc(shippingAddress)||'–'}\n👶 ${esc(childAgeGender)||'–'}\n⏰ ${timestamp}\n━━━━━━━━━━━━━━━━━━\n⏳ <i>Đang chờ khách chuyển khoản...</i>`;
-        const params = new URLSearchParams({ chat_id: TELEGRAM_CHAT_ID, text: msg, parse_mode: 'HTML' });
-        fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage?${params}`, { method: 'GET' }).catch(() => {});
-      }
+      // Thông báo Telegram – đơn đang chờ thanh toán (qua backend an toàn)
+      const esc = s => (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      const msg = `🛒 <b>ĐƠN MỚI – CHỜ THANH TOÁN SEPAY</b>\n━━━━━━━━━━━━━━━━━━\n👤 ${esc(parentName)}\n📞 <code>${esc(phone)}</code>\n📧 <code>${esc(email||'–')}</code>\n📦 ${esc(selectedPkg)}\n💰 ${amount.toLocaleString('vi-VN')}đ\n🔑 Mã CK: <code>${paymentCode}</code>\n📍 ${esc(shippingAddress)||'–'}\n👶 ${esc(childAgeGender)||'–'}\n⏰ ${timestamp}\n━━━━━━━━━━━━━━━━━━\n⏳ <i>Đang chờ khách chuyển khoản...</i>`;
+      sendTelegramAlert(msg);
 
       // Hiển thị QR thanh toán và bắt đầu polling
       showSepayQR(paymentCode, amount, parentName, phone, orderId, email, selectedPkg, shippingAddress);
@@ -2556,13 +2654,10 @@
         }).catch(err => console.warn('Lỗi gửi email xác nhận:', err));
       }
 
-      // 2. Bắn thông báo Telegram
-      if (TELEGRAM_BOT_TOKEN && TELEGRAM_CHAT_ID) {
-        const esc = s => (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-        const msg = `✅ <b>THANH TOÁN THÀNH CÔNG – SEPAY!</b>\n━━━━━━━━━━━━━━━━━━\n👤 ${esc(name)}\n📞 <code>${esc(phone)}</code>\n📧 <code>${esc(email||'–')}</code>\n💰 ${amount.toLocaleString('vi-VN')}đ\n🔑 <code>${paymentCode}</code>\n━━━━━━━━━━━━━━━━━━\n🚀 <i>Xác nhận và giao hàng ngay!</i>`;
-        const params = new URLSearchParams({ chat_id: TELEGRAM_CHAT_ID, text: msg, parse_mode: 'HTML' });
-        fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage?${params}`, { method: 'GET' }).catch(() => {});
-      }
+      // 2. Bắn thông báo Telegram (qua backend an toàn)
+      const esc = s => (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      const msg = `✅ <b>THANH TOÁN THÀNH CÔNG – SEPAY!</b>\n━━━━━━━━━━━━━━━━━━\n👤 ${esc(name)}\n📞 <code>${esc(phone)}</code>\n📧 <code>${esc(email||'–')}</code>\n💰 ${amount.toLocaleString('vi-VN')}đ\n🔑 <code>${paymentCode}</code>\n━━━━━━━━━━━━━━━━━━\n🚀 <i>Xác nhận và giao hàng ngay!</i>`;
+      sendTelegramAlert(msg);
 
       // 3. Hiển thị popup thành công trên web
       const successModal = document.getElementById('successModal');
