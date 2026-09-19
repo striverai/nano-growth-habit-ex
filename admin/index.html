@@ -572,6 +572,34 @@ CREATE POLICY IF NOT EXISTS "anon_all_customers" ON customers FOR ALL TO anon US
           throw new Error(errData.message || 'Lỗi khi cập nhật trạng thái');
         }
         showToast('Đã kích hoạt thanh toán thành công!');
+
+        // Gửi email xác nhận đơn hàng thành công qua Resend nếu có email
+        const order = ordersCache.find(o => o.id === orderId);
+        let custEmail = order?.customer_email || '';
+        if (!custEmail && order?.customer_address && order.customer_address.includes('Email: ')) {
+          const m = order.customer_address.match(/Email:\s*([^\s|]+)/);
+          if (m) custEmail = m[1];
+        }
+        if (custEmail) {
+          fetch('/api/send-order-confirmation', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              customer_name: order.customer_name,
+              customer_email: custEmail,
+              product_name: order.product_name,
+              quantity: order.quantity,
+              amount: order.amount,
+              payment_code: order.payment_code,
+              customer_address: order.customer_address,
+              status: 'success'
+            })
+          }).then(r => r.json()).then(res => {
+            console.log('Order confirmation email sent:', res);
+            showToast('Đã gửi email xác nhận thành công đến ' + custEmail);
+          }).catch(err => console.warn('Lỗi gửi email xác nhận:', err));
+        }
+
         loadOrders();
       } catch (err) {
         showToast(err.message, 'error');

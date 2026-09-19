@@ -2490,7 +2490,7 @@
       }
 
       // Hiển thị QR thanh toán và bắt đầu polling
-      showSepayQR(paymentCode, amount, parentName, phone, orderId);
+      showSepayQR(paymentCode, amount, parentName, phone, orderId, email, selectedPkg, shippingAddress);
     }
 
     function closeModal() {
@@ -2498,10 +2498,10 @@
     }
 
     // =========================================================================
-    // SEPAY: Hiển thị QR, Polling trạng thái, Xác nhận thanh toán
+    // SEPAY: Hiển thị QR, Polling trạng thái, Xác nhận thanh toán & Gửi Email
     // =========================================================================
 
-    function showSepayQR(paymentCode, amount, name, phone, orderId) {
+    function showSepayQR(paymentCode, amount, name, phone, orderId, email, selectedPkg, shippingAddress) {
       const modal = document.getElementById('sepayQRModal');
       if (!modal) return;
       const qrUrl = `https://vietqr.app/img?acc=00005510675&bank=TPBank&amount=${amount}&des=${paymentCode}&template=compact`;
@@ -2509,10 +2509,10 @@
       document.getElementById('sepayAmount').textContent = amount.toLocaleString('vi-VN') + 'đ';
       document.getElementById('sepayCode').textContent = paymentCode;
       modal.classList.remove('hidden');
-      startSepayPolling(orderId, name, phone, paymentCode, amount);
+      startSepayPolling(orderId, name, phone, paymentCode, amount, email, selectedPkg, shippingAddress);
     }
 
-    function startSepayPolling(orderId, name, phone, paymentCode, amount) {
+    function startSepayPolling(orderId, name, phone, paymentCode, amount, email, selectedPkg, shippingAddress) {
       if (sepayPollingInterval) clearInterval(sepayPollingInterval);
       let tries = 0;
       const MAX = 120; // 6 phút (120 × 3s)
@@ -2527,24 +2527,47 @@
           const data = await r.json();
           if (data?.[0]?.status === 'success') {
             clearInterval(sepayPollingInterval);
-            onPaymentSuccess(name, phone, paymentCode, amount);
+            onPaymentSuccess(name, phone, paymentCode, amount, email, selectedPkg, shippingAddress);
           }
         } catch (err) { console.warn('Sepay polling:', err); }
       }, 3000);
     }
 
-    function onPaymentSuccess(name, phone, paymentCode, amount) {
+    function onPaymentSuccess(name, phone, paymentCode, amount, email, selectedPkg, shippingAddress) {
       document.getElementById('sepayQRModal')?.classList.add('hidden');
       document.getElementById('orderForm')?.reset();
+
+      // 1. Tự động gửi Email xác nhận đơn hàng thành công qua Resend
+      if (email) {
+        fetch('/api/send-order-confirmation', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            customer_name: name,
+            customer_email: email,
+            product_name: selectedPkg || 'Nano Growth Habit EX',
+            amount: amount,
+            payment_code: paymentCode,
+            customer_address: shippingAddress,
+            status: 'success'
+          })
+        }).then(r => r.json()).then(res => {
+          console.log('Order confirmation email sent:', res);
+        }).catch(err => console.warn('Lỗi gửi email xác nhận:', err));
+      }
+
+      // 2. Bắn thông báo Telegram
       if (TELEGRAM_BOT_TOKEN && TELEGRAM_CHAT_ID) {
         const esc = s => (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-        const msg = `✅ <b>THANH TOÁN THÀNH CÔNG – SEPAY!</b>\n━━━━━━━━━━━━━━━━━━\n👤 ${esc(name)}\n📞 <code>${esc(phone)}</code>\n💰 ${amount.toLocaleString('vi-VN')}đ\n🔑 <code>${paymentCode}</code>\n━━━━━━━━━━━━━━━━━━\n🚀 <i>Xác nhận và giao hàng ngay!</i>`;
+        const msg = `✅ <b>THANH TOÁN THÀNH CÔNG – SEPAY!</b>\n━━━━━━━━━━━━━━━━━━\n👤 ${esc(name)}\n📞 <code>${esc(phone)}</code>\n📧 <code>${esc(email||'–')}</code>\n💰 ${amount.toLocaleString('vi-VN')}đ\n🔑 <code>${paymentCode}</code>\n━━━━━━━━━━━━━━━━━━\n🚀 <i>Xác nhận và giao hàng ngay!</i>`;
         const params = new URLSearchParams({ chat_id: TELEGRAM_CHAT_ID, text: msg, parse_mode: 'HTML' });
         fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage?${params}`, { method: 'GET' }).catch(() => {});
       }
+
+      // 3. Hiển thị popup thành công trên web
       const successModal = document.getElementById('successModal');
       const message = document.getElementById('modalMessage');
-      if (message) message.innerHTML = `🎉 Thanh toán thành công!<br><br>Cảm ơn <strong>${name}</strong> đã đặt hàng <strong>Nano Growth Habit EX</strong>! Chúng tôi sẽ xác nhận và giao hàng đến bạn trong thời gian sớm nhất.<br><br>📋 Mã đơn: <code style="font-size:13px;background:#fef3c7;padding:2px 8px;border-radius:6px">${paymentCode}</code>`;
+      if (message) message.innerHTML = `🎉 Thanh toán thành công!<br><br>Cảm ơn <strong>${name}</strong> đã đặt hàng <strong>Nano Growth Habit EX</strong>! Hệ thống đã gửi email xác nhận đến <strong>${email || 'bạn'}</strong> và đội ngũ sẽ giao hàng trong thời gian sớm nhất.<br><br>📋 Mã đơn: <code style="font-size:13px;background:#fef3c7;padding:2px 8px;border-radius:6px">${paymentCode}</code>`;
       if (successModal) successModal.classList.remove('hidden');
     }
 
