@@ -1,0 +1,14 @@
+{
+  "name": "nano-telegram-bot",
+  "version": "1.0.0",
+  "description": "Telegram Bot AI Agent connecting to Odoo ERP",
+  "type": "module",
+  "main": "bot.js",
+  "scripts": {
+    "start": "node bot.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "pg": "^8.13.1"
+  }
+}
