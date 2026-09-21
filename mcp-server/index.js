@@ -2,13 +2,15 @@
 
 /**
  * Nano Growth Habit EX - Model Context Protocol (MCP) Server
- * Cung cấp "tay chân" cho AI Agent quản lý đơn hàng, khách hàng, sản phẩm, và thông báo.
+ * Transport: Streamable-HTTP (lắng nghe tại http://127.0.0.1:3001/mcp)
+ * Kết nối với goClaw AI Agent / Telegram Bot
  */
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { z } from "zod";
 import { DatabaseSync } from "node:sqlite";
+import http from "node:http";
 import path from "node:path";
 import fs from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -17,7 +19,7 @@ import dotenv from "dotenv";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Load .env from project root
+// Load .env
 const envPath = process.env.ENV_PATH || path.resolve(__dirname, "../.env");
 if (fs.existsSync(envPath)) {
   dotenv.config({ path: envPath });
@@ -25,7 +27,11 @@ if (fs.existsSync(envPath)) {
   dotenv.config();
 }
 
-// Locate SQLite database brain.db
+// Cổng lắng nghe (mặc định 3001 cho goClaw)
+const PORT = parseInt(process.env.MCP_PORT || "3001", 10);
+const HOST = process.env.MCP_HOST || "127.0.0.1";
+
+// Kết nối brain.db
 const DB_PATH = process.env.BRAIN_DB_PATH || path.resolve(__dirname, "../brain.db");
 let db = null;
 
@@ -46,13 +52,72 @@ const server = new McpServer({
 });
 
 // ─────────────────────────────────────────────────────────────
-// TOOL 1: get_business_stats - Báo cáo tổng quan kinh doanh
+// TOOL 1: update_hero - Sửa tiêu đề landing page trong 3 giây
+// ─────────────────────────────────────────────────────────────
+server.tool(
+  "update_hero",
+  "Đổi tiêu đề chính (Hero Headline h1) trên landing page index.html khi có flash sale hoặc chiến dịch mới.",
+  {
+    new_title: z.string().describe("Nội dung tiêu đề mới cần hiển thị trên website")
+  },
+  async ({ new_title }) => {
+    const timestamp = new Date().toISOString();
+    console.log(`[${timestamp}] [MCP CALL] update_hero: "${new_title}"`);
+
+    try {
+      const htmlPath = path.resolve(__dirname, "../index.html");
+      if (!fs.existsSync(htmlPath)) {
+        return {
+          content: [{ type: "text", text: `❌ Không tìm thấy file index.html tại: ${htmlPath}` }],
+          isError: true
+        };
+      }
+
+      let content = fs.readFileSync(htmlPath, "utf8");
+
+      // Tạo bản backup trước khi sửa
+      const backupPath = path.resolve(__dirname, "../index.html.bak");
+      fs.writeFileSync(backupPath, content, "utf8");
+
+      // Thay thế thẻ h1 của Hero Section
+      const h1Regex = /<h1 class="text-2xl sm:text-4xl md:text-5xl font-black text-brand-cacao-900 tracking-tight leading-tight md:leading-snug mb-4">[\s\S]*?<\/h1>/;
+      if (!h1Regex.test(content)) {
+        return {
+          content: [{ type: "text", text: `❌ Không tìm thấy thẻ tiêu đề h1 Hero Section trong index.html để thay thế.` }],
+          isError: true
+        };
+      }
+
+      const newH1 = `<h1 class="text-2xl sm:text-4xl md:text-5xl font-black text-brand-cacao-900 tracking-tight leading-tight md:leading-snug mb-4">\n            ${new_title}\n          </h1>`;
+      content = content.replace(h1Regex, newH1);
+      fs.writeFileSync(htmlPath, content, "utf8");
+
+      return {
+        content: [{
+          type: "text",
+          text: `✅ ĐÃ ĐỔI TIÊU ĐỀ LANDING THÀNH CÔNG!\n\n📝 Tiêu đề mới:\n"${new_title}"\n\n🌐 Khách hàng truy cập website https://nano.hnkt.vn refresh trang là sẽ thấy tiêu đề mới ngay lập tức!`
+        }]
+      };
+    } catch (err) {
+      return {
+        content: [{ type: "text", text: `❌ Lỗi khi đổi tiêu đề: ${err.message}` }],
+        isError: true
+      };
+    }
+  }
+);
+
+// ─────────────────────────────────────────────────────────────
+// TOOL 2: today_orders / get_business_stats - Báo cáo doanh thu
 // ─────────────────────────────────────────────────────────────
 server.tool(
   "get_business_stats",
-  "Lấy báo cáo tổng quan tình hình kinh doanh: tổng doanh thu thực nhận, số đơn thành công, tổng đơn, khách hàng, sản phẩm.",
+  "Lấy báo cáo tổng quan tình hình kinh doanh: tổng doanh thu thực nhận, số đơn thành công, tổng đơn, khách hàng.",
   {},
   async () => {
+    const timestamp = new Date().toISOString();
+    console.log(`[${timestamp}] [MCP CALL] get_business_stats`);
+
     try {
       const database = getDb();
       const products = database.prepare("SELECT COUNT(*) AS count FROM products WHERE is_active = 1").get()?.count || 0;
@@ -63,7 +128,7 @@ server.tool(
       const totalRevenue = database.prepare("SELECT SUM(amount) AS total FROM orders WHERE status = 'success'").get()?.total || 0;
 
       const summaryText = [
-        `📊 BÁO CÁO TỔNG QUAN KINH DOANH (NANO CANXI):`,
+        `📊 BÁO CÁO TỔNG QUAN KINH DOANH (NANO GROWTH HABIT EX):`,
         `- Tổng doanh thu thực nhận: ${Number(totalRevenue).toLocaleString("vi-VN")} đ`,
         `- Tổng số đơn hàng: ${totalOrders} đơn`,
         `  + Đã thanh toán thành công: ${successOrders} đơn`,
@@ -85,21 +150,85 @@ server.tool(
 );
 
 // ─────────────────────────────────────────────────────────────
-// TOOL 2: list_orders - Xem danh sách đơn hàng
+// TOOL 3: search_customer - Tra cứu khách hàng theo SĐT / Tên
+// ─────────────────────────────────────────────────────────────
+server.tool(
+  "search_customer",
+  "Tìm kiếm thông tin khách hàng theo Số điện thoại, Email hoặc Họ tên, kèm lịch sử đơn hàng của họ.",
+  {
+    query: z.string().describe("Số điện thoại, email hoặc họ tên khách hàng")
+  },
+  async ({ query }) => {
+    const timestamp = new Date().toISOString();
+    console.log(`[${timestamp}] [MCP CALL] search_customer: "${query}"`);
+
+    try {
+      const database = getDb();
+      const searchTerm = `%${query.trim()}%`;
+      const customers = database.prepare(`
+        SELECT * FROM customers 
+        WHERE phone LIKE ? OR email LIKE ? OR name LIKE ?
+        LIMIT 5
+      `).all(searchTerm, searchTerm, searchTerm);
+
+      if (customers.length === 0) {
+        return {
+          content: [{ type: "text", text: `Không tìm thấy khách hàng nào khớp với từ khoá: "${query}"` }]
+        };
+      }
+
+      let resultText = `🔍 Tìm thấy ${customers.length} khách hàng:\n\n`;
+      for (const c of customers) {
+        resultText += `👤 ID #${c.id}: ${c.name} | SĐT: ${c.phone} | Email: ${c.email || "Chưa có"} | Zalo: ${c.zalo || "N/A"}\n`;
+        const customerOrders = database.prepare(`
+          SELECT o.id, o.amount, o.status, o.ordered_at, p.name AS product_name
+          FROM orders o
+          LEFT JOIN products p ON o.product_id = p.id
+          WHERE o.customer_id = ?
+        `).all(c.id);
+
+        if (customerOrders.length > 0) {
+          resultText += `   👉 Lịch sử đơn hàng (${customerOrders.length} đơn):\n`;
+          for (const ord of customerOrders) {
+            resultText += `      - Đơn #${ord.id}: ${ord.product_name} | ${Number(ord.amount).toLocaleString("vi-VN")}đ | [${ord.status}] | ${ord.ordered_at}\n`;
+          }
+        } else {
+          resultText += `   👉 Khách chưa phát sinh đơn hàng (đang ở danh sách waitlist/tư vấn).\n`;
+        }
+        resultText += `\n`;
+      }
+
+      return {
+        content: [{ type: "text", text: resultText.trim() }]
+      };
+    } catch (err) {
+      return {
+        content: [{ type: "text", text: `❌ Lỗi khi tìm khách hàng: ${err.message}` }],
+        isError: true
+      };
+    }
+  }
+);
+
+// ─────────────────────────────────────────────────────────────
+// TOOL 4: list_orders - Xem danh sách đơn hàng gần đây
 // ─────────────────────────────────────────────────────────────
 server.tool(
   "list_orders",
   "Tra cứu danh sách đơn hàng gần đây, hỗ trợ lọc theo trạng thái (all, pending, success, cancelled, shipping).",
   {
     status: z.enum(["all", "pending", "success", "cancelled", "shipping"]).optional().default("all"),
-    limit: z.number().int().min(1).max(100).optional().default(20)
+    limit: z.number().int().min(1).max(50).optional().default(10)
   },
   async ({ status, limit }) => {
+    const timestamp = new Date().toISOString();
+    console.log(`[${timestamp}] [MCP CALL] list_orders: status=${status}, limit=${limit}`);
+
     try {
       const database = getDb();
       let query = `
         SELECT o.id, o.quantity, o.amount, o.status, o.payment_code, o.ordered_at, o.paid_at, o.note,
-               c.name AS customer_name, c.phone AS customer_phone, c.email AS customer_email,
+               c.name AS customer_name, c.phone AS customer_phone,
                p.name AS product_name
         FROM orders o
         LEFT JOIN customers c ON o.customer_id = c.id
@@ -121,7 +250,7 @@ server.tool(
       }
 
       const formatted = rows.map((o) => (
-        `#${o.id} | Khách: ${o.customer_name || "Chưa rõ"} (${o.customer_phone || "N/A"}) | SP: ${o.product_name || "N/A"} x${o.quantity} | Tiền: ${Number(o.amount).toLocaleString("vi-VN")}đ | Trạng thái: [${o.status.toUpperCase()}] | Mã: ${o.payment_code || "N/A"} | Ngày: ${o.ordered_at || "N/A"}`
+        `#${o.id} | Khách: ${o.customer_name || "Chưa rõ"} (${o.customer_phone || "N/A"}) | SP: ${o.product_name || "N/A"} x${o.quantity} | Tiền: ${Number(o.amount).toLocaleString("vi-VN")}đ | [${o.status.toUpperCase()}] | ${o.ordered_at || "N/A"}`
       )).join("\n");
 
       return {
@@ -129,7 +258,7 @@ server.tool(
       };
     } catch (err) {
       return {
-        content: [{ type: "text", text: `❌ Lỗi khi lấy danh sách đơn: ${err.message}` }],
+        content: [{ type: "text", text: `❌ Lỗi lấy đơn hàng: ${err.message}` }],
         isError: true
       };
     }
@@ -137,23 +266,26 @@ server.tool(
 );
 
 // ─────────────────────────────────────────────────────────────
-// TOOL 3: update_order_status - Cập nhật trạng thái / duyệt đơn
+// TOOL 5: update_order_status - Duyệt đơn thủ công
 // ─────────────────────────────────────────────────────────────
 server.tool(
   "update_order_status",
-  "Cập nhật trạng thái đơn hàng (ví dụ duyệt đơn thành công: 'success', huỷ đơn: 'cancelled', v.v.).",
+  "Cập nhật trạng thái đơn hàng (duyệt đơn thành công: 'success', huỷ đơn: 'cancelled', v.v.).",
   {
-    order_id: z.number().int().describe("ID của đơn hàng cần cập nhật"),
+    order_id: z.number().int().describe("ID đơn hàng"),
     status: z.enum(["pending", "success", "cancelled", "shipping"]).describe("Trạng thái mới"),
-    note: z.string().optional().describe("Ghi chú bổ sung (tùy chọn)")
+    note: z.string().optional().describe("Ghi chú bổ sung")
   },
   async ({ order_id, status, note }) => {
+    const timestamp = new Date().toISOString();
+    console.log(`[${timestamp}] [MCP CALL] update_order_status: #${order_id} -> ${status}`);
+
     try {
       const database = getDb();
       const existing = database.prepare("SELECT * FROM orders WHERE id = ?").get(order_id);
       if (!existing) {
         return {
-          content: [{ type: "text", text: `❌ Không tìm thấy đơn hàng mang ID #${order_id}.` }],
+          content: [{ type: "text", text: `❌ Không tìm thấy đơn hàng #${order_id}.` }],
           isError: true
         };
       }
@@ -161,7 +293,6 @@ server.tool(
       const now = new Date().toISOString();
       let sql = "UPDATE orders SET status = ?";
       const params = [status];
-
       if (status === "success" && !existing.paid_at) {
         sql += ", paid_at = ?";
         params.push(now);
@@ -174,16 +305,12 @@ server.tool(
       params.push(order_id);
 
       database.prepare(sql).run(...params);
-
       return {
-        content: [{
-          type: "text",
-          text: `✅ Đã cập nhật đơn hàng #${order_id} thành trạng thái [${status.toUpperCase()}].${note ? ` Ghi chú: ${note}` : ""}`
-        }]
+        content: [{ type: "text", text: `✅ Đã cập nhật đơn hàng #${order_id} sang trạng thái [${status.toUpperCase()}].` }]
       };
     } catch (err) {
       return {
-        content: [{ type: "text", text: `❌ Lỗi cập nhật đơn hàng: ${err.message}` }],
+        content: [{ type: "text", text: `❌ Lỗi cập nhật: ${err.message}` }],
         isError: true
       };
     }
@@ -191,249 +318,49 @@ server.tool(
 );
 
 // ─────────────────────────────────────────────────────────────
-// TOOL 4: search_customer - Tra cứu thông tin khách hàng
-// ─────────────────────────────────────────────────────────────
-server.tool(
-  "search_customer",
-  "Tìm kiếm thông tin khách hàng theo Số điện thoại, Email hoặc Họ tên, kèm lịch sử đơn hàng của họ.",
-  {
-    query: z.string().describe("Số điện thoại, email hoặc họ tên khách hàng")
-  },
-  async ({ query }) => {
-    try {
-      const database = getDb();
-      const searchTerm = `%${query.trim()}%`;
-      const customers = database.prepare(`
-        SELECT * FROM customers 
-        WHERE phone LIKE ? OR email LIKE ? OR name LIKE ?
-        LIMIT 10
-      `).all(searchTerm, searchTerm, searchTerm);
-
-      if (customers.length === 0) {
-        return {
-          content: [{ type: "text", text: `Không tìm thấy khách hàng nào khớp với từ khoá: "${query}"` }]
-        };
-      }
-
-      let resultText = `🔍 Tìm thấy ${customers.length} khách hàng:\n\n`;
-      for (const c of customers) {
-        resultText += `👤 ID #${c.id}: ${c.name} | SĐT: ${c.phone} | Email: ${c.email || "Chưa có"} | Zalo: ${c.zalo || "N/A"}\n`;
-        // Lấy lịch sử đơn hàng của khách này
-        const customerOrders = database.prepare(`
-          SELECT o.id, o.amount, o.status, o.ordered_at, p.name AS product_name
-          FROM orders o
-          LEFT JOIN products p ON o.product_id = p.id
-          WHERE o.customer_id = ?
-        `).all(c.id);
-
-        if (customerOrders.length > 0) {
-          resultText += `   👉 Lịch sử đơn hàng (${customerOrders.length} đơn):\n`;
-          for (const ord of customerOrders) {
-            resultText += `      - Đơn #${ord.id}: ${ord.product_name} | ${Number(ord.amount).toLocaleString("vi-VN")}đ | [${ord.status}] | ${ord.ordered_at}\n`;
-          }
-        } else {
-          resultText += `   👉 Khách chưa phát sinh đơn hàng nào (đang ở danh sách waitlist/tư vấn).\n`;
-        }
-        resultText += `\n`;
-      }
-
-      return {
-        content: [{ type: "text", text: resultText.trim() }]
-      };
-    } catch (err) {
-      return {
-        content: [{ type: "text", text: `❌ Lỗi khi tìm khách hàng: ${err.message}` }],
-        isError: true
-      };
-    }
-  }
-);
-
-// ─────────────────────────────────────────────────────────────
-// TOOL 5: list_products - Xem danh mục sản phẩm & tồn kho
-// ─────────────────────────────────────────────────────────────
-server.tool(
-  "list_products",
-  "Lấy danh sách toàn bộ sản phẩm, giá bán, loại và trạng thái tồn kho.",
-  {},
-  async () => {
-    try {
-      const database = getDb();
-      const products = database.prepare("SELECT * FROM products ORDER BY id ASC").all();
-
-      const formatted = products.map((p) => (
-        `📦 ID #${p.id}: ${p.name} | Giá: ${Number(p.price).toLocaleString("vi-VN")}đ | Loại: ${p.type} | Tồn kho: ${p.stock ?? "Không giới hạn"} | Bật bán: ${p.is_active ? "ĐANG BÁN" : "TẠM NGƯNG"}\n   Mô tả: ${p.description || "N/A"}`
-      )).join("\n\n");
-
-      return {
-        content: [{ type: "text", text: `📋 Danh mục sản phẩm Nano Growth Habit EX:\n\n${formatted}` }]
-      };
-    } catch (err) {
-      return {
-        content: [{ type: "text", text: `❌ Lỗi khi lấy danh sách sản phẩm: ${err.message}` }],
-        isError: true
-      };
-    }
-  }
-);
-
-// ─────────────────────────────────────────────────────────────
-// TOOL 6: get_knowledge_base - Đọc kiến thức & brand voice
-// ─────────────────────────────────────────────────────────────
-server.tool(
-  "get_knowledge_base",
-  "Đọc tri thức sản phẩm, USP, Brand Voice, thông điệp bán hàng từ brain.db.",
-  {
-    topic: z.enum(["all", "business", "brand_voice", "knowledge"]).optional().default("all")
-  },
-  async ({ topic }) => {
-    try {
-      const database = getDb();
-      let output = `🧠 TRI THỨC SẢN PHẨM & THƯƠNG HIỆU (brain.db):\n\n`;
-
-      if (topic === "all" || topic === "business") {
-        const businessRows = database.prepare("SELECT title, content FROM business").all();
-        output += `=== 1. THÔNG TIN DOANH NGHIỆP & SẢN PHẨM ===\n`;
-        businessRows.forEach((r) => { output += `📌 ${r.title}:\n${r.content}\n\n`; });
-      }
-
-      if (topic === "all" || topic === "brand_voice") {
-        const voiceRows = database.prepare("SELECT title, content FROM brand_voice").all();
-        output += `=== 2. BRAND VOICE & QUY TẮC NÓI CHUYỆN ===\n`;
-        voiceRows.forEach((r) => { output += `🗣️ ${r.title}:\n${r.content}\n\n`; });
-      }
-
-      if (topic === "all" || topic === "knowledge") {
-        const knowRows = database.prepare("SELECT title, content FROM knowledge").all();
-        output += `=== 3. KIẾN THỨC BỔ SUNG ===\n`;
-        knowRows.forEach((r) => { output += `💡 ${r.title}:\n${r.content}\n\n`; });
-      }
-
-      return {
-        content: [{ type: "text", text: output.trim() }]
-      };
-    } catch (err) {
-      return {
-        content: [{ type: "text", text: `❌ Lỗi đọc tri thức: ${err.message}` }],
-        isError: true
-      };
-    }
-  }
-);
-
-// ─────────────────────────────────────────────────────────────
-// TOOL 7: send_telegram_alert - Gửi thông báo Telegram
-// ─────────────────────────────────────────────────────────────
-server.tool(
-  "send_telegram_alert",
-  "Gửi tin nhắn thông báo hoặc cảnh báo tức thì vào nhóm/kênh Telegram quản trị.",
-  {
-    message: z.string().describe("Nội dung tin nhắn cần gửi qua Telegram")
-  },
-  async ({ message }) => {
-    const token = process.env.TELEGRAM_BOT_TOKEN;
-    const chatId = process.env.TELEGRAM_CHAT_ID;
-
-    if (!token || !chatId) {
-      return {
-        content: [{ type: "text", text: "❌ Chưa cấu hình TELEGRAM_BOT_TOKEN hoặc TELEGRAM_CHAT_ID trong .env" }],
-        isError: true
-      };
-    }
-
-    try {
-      const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          chat_id: chatId,
-          text: message,
-          parse_mode: "HTML"
-        })
-      });
-
-      const data = await response.json();
-      if (data.ok) {
-        return {
-          content: [{ type: "text", text: `✅ Đã gửi tin nhắn Telegram thành công!` }]
-        };
-      } else {
-        return {
-          content: [{ type: "text", text: `❌ Lỗi từ Telegram: ${data.description}` }],
-          isError: true
-        };
-      }
-    } catch (err) {
-      return {
-        content: [{ type: "text", text: `❌ Lỗi gửi Telegram: ${err.message}` }],
-        isError: true
-      };
-    }
-  }
-);
-
-// ─────────────────────────────────────────────────────────────
-// TOOL 8: send_customer_email - Gửi email qua Resend
-// ─────────────────────────────────────────────────────────────
-server.tool(
-  "send_customer_email",
-  "Gửi email chăm sóc khách hàng hoặc thông báo đơn hàng qua dịch vụ Resend.",
-  {
-    to: z.string().email().describe("Địa chỉ email người nhận"),
-    subject: z.string().describe("Tiêu đề email"),
-    html_content: z.string().describe("Nội dung email định dạng HTML")
-  },
-  async ({ to, subject, html_content }) => {
-    const resendKey = process.env.RESEND_API_KEY;
-    if (!resendKey) {
-      return {
-        content: [{ type: "text", text: "❌ Chưa cấu hình RESEND_API_KEY trong .env" }],
-        isError: true
-      };
-    }
-
-    try {
-      const response = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${resendKey}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          from: "Nano Canxi <onboarding@resend.dev>",
-          to: [to],
-          subject: subject,
-          html: html_content
-        })
-      });
-
-      const data = await response.json();
-      if (response.ok) {
-        return {
-          content: [{ type: "text", text: `✅ Đã gửi email thành công tới ${to}! (ID: ${data.id})` }]
-        };
-      } else {
-        return {
-          content: [{ type: "text", text: `❌ Lỗi từ Resend: ${data.message || JSON.stringify(data)}` }],
-          isError: true
-        };
-      }
-    } catch (err) {
-      return {
-        content: [{ type: "text", text: `❌ Lỗi gửi email: ${err.message}` }],
-        isError: true
-      };
-    }
-  }
-);
-
-// ─────────────────────────────────────────────────────────────
-// KHỞI CHẠY TRANSPORT (STDIO)
+// KHỞI TẠO HTTP TRANSPORT (STREAMABLE-HTTP CHO GOCLAW)
 // ─────────────────────────────────────────────────────────────
 async function main() {
-  const transport = new StdioServerTransport();
+  const transport = new StreamableHTTPServerTransport({
+    sessionIdGenerator: undefined // Stateless mode cho goClaw
+  });
+
   await server.connect(transport);
-  console.error("🚀 Nano Canxi MCP Server is running on stdio!");
+
+  const httpServer = http.createServer(async (req, res) => {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, x-session-id");
+
+    if (req.method === "OPTIONS") {
+      res.writeHead(204);
+      res.end();
+      return;
+    }
+
+    if (req.url === "/health") {
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ status: "ok", name: "nano-canxi-mcp", port: PORT, transport: "streamable-http" }));
+      return;
+    }
+
+    if (req.url === "/mcp" || req.url?.startsWith("/mcp")) {
+      await transport.handleRequest(req, res);
+      return;
+    }
+
+    res.writeHead(404, { "Content-Type": "text/plain" });
+    res.end("Not Found");
+  });
+
+  httpServer.listen(PORT, HOST, () => {
+    console.log(`===================================================`);
+    console.log(`🚀 Nano Canxi MCP Server (Streamable-HTTP) running!`);
+    console.log(`📍 Endpoint: http://${HOST}:${PORT}/mcp`);
+    console.log(`❤️  Health:   http://${HOST}:${PORT}/health`);
+    console.log(`🔒 Localhost-only bind: ${HOST}`);
+    console.log(`===================================================`);
+  });
 }
 
 main().catch((err) => {
