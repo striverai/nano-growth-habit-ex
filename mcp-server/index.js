@@ -29,7 +29,7 @@ if (fs.existsSync(envPath)) {
 
 // Cổng lắng nghe (mặc định 3001 cho goClaw)
 const PORT = parseInt(process.env.MCP_PORT || "3001", 10);
-const HOST = process.env.MCP_HOST || "127.0.0.1";
+const HOST = process.env.MCP_HOST || "0.0.0.0";
 
 // Kết nối brain.db
 const DB_PATH = process.env.BRAIN_DB_PATH || path.resolve(__dirname, "../brain.db");
