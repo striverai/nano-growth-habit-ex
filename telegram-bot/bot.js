@@ -274,19 +274,25 @@ async function askGemini(userText) {
       }
     };
 
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${apiKey}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
+    const candidateModels = ["gemini-flash-lite-latest", "gemini-3-flash-preview", "gemini-flash-latest"];
+    for (const model of candidateModels) {
+      try {
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
 
-    if (res.ok) {
-      const data = await res.json();
-      const reply = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (reply) return reply.trim();
-    } else {
-      const errText = await res.text();
-      console.error("Gemini API Error:", errText);
+        if (res.ok) {
+          const data = await res.json();
+          const reply = data.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (reply) return reply.trim();
+        } else {
+          console.warn(`Model ${model} trả về mã lỗi:`, res.status);
+        }
+      } catch (err) {
+        console.warn(`Lỗi khi gọi model ${model}:`, err.message);
+      }
     }
   } catch (err) {
     console.error("Lỗi gọi Gemini AI:", err.message);
