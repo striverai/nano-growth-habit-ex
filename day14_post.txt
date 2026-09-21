@@ -1,0 +1,18 @@
+Từ Vercel lên VPS thật — và khoảnh khắc AI có "cánh tay" thật sự 🚀
+
+Sáng nay website còn chạy demo trên Vercel — tối nay đã kéo trọn vẹn về "ngôi nhà" VPS của chính mình, chạy trên hệ điều hành Linux thật, database thật, và bảo mật HTTPS với Caddy mượt mà.
+
+Nhưng khoảnh khắc "wow" nhất hôm nay không phải là deploy web. Mà là lúc ngồi cà phê, mở Telegram nhắn đúng 1 câu:
+"Đổi tiêu đề landing thành 'Flash sale cuối tuần 30%'"
+→ 3 giây sau mở điện thoại refresh website https://nano.hnkt.vn: Tiêu đề trên trang web đã được đổi thật 100%! 
+
+Lần đầu tiên thấy AI không chỉ "nói miệng" hay trả lời text suông, mà thực sự có "tay chân" (qua giao thức MCP - Model Context Protocol):
+• AI tự đọc cơ sở dữ liệu Odoo ERP báo cáo đơn hàng và khách hàng.
+• AI tự sửa mã nguồn website khi có chiến dịch khuyến mãi mới.
+• AI tự động bắn thông báo tức thì về Telegram khi có khách vừa điền form tư vấn.
+
+Cảm giác làm chủ công nghệ và tự do vận hành kinh doanh nó đã thực sự. Không cần mở laptop, không cần gõ lệnh phức tạp — mọi thứ nằm gọn trong lòng bàn tay qua một câu nhắn Telegram.
+
+Cảm ơn anh Dương Trọng Nghĩa (https://www.facebook.com/duongtrongnghia.theKP3/) và thử thách Ngày 14 quá xịn! 🔥
+
+#AI #ModelContextProtocol #VPS #Automation #KhuPho3 #focuscamp
