@@ -189,6 +189,111 @@ async function handleFind(chatId, query) {
   }
 }
 
+// ─────────────────────────────────────────────────────────────
+// TÍCH HỢP TRÍ TUỆ NHÂN TẠO GEMINI CONVERSATIONAL AI
+// ─────────────────────────────────────────────────────────────
+async function askGemini(userText) {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  try {
+    let odooContext = "Hiện chưa có dữ liệu Odoo.";
+    try {
+      const client = await pool.connect();
+      try {
+        const statsRes = await client.query(`
+          SELECT 
+            COUNT(*) AS total,
+            COUNT(*) FILTER (WHERE description LIKE '%1 hộp%') AS box_1,
+            COUNT(*) FILTER (WHERE description LIKE '%2 hộp%') AS box_2,
+            COUNT(*) FILTER (WHERE description LIKE '%3 hộp%') AS box_3
+          FROM crm_lead 
+          WHERE name LIKE '%Nano Growth Habit%'
+        `);
+        const row = statsRes.rows[0];
+        const total = parseInt(row.total || 0, 10);
+        const box1 = parseInt(row.box_1 || 0, 10);
+        const box2 = parseInt(row.box_2 || 0, 10);
+        const box3 = parseInt(row.box_3 || 0, 10);
+        const estRevenue = (box1 * 1250000) + (box2 * 2350000) + (box3 * 3390000);
+
+        const recentLeadsRes = await client.query(`
+          SELECT id, contact_name, phone, create_date, description 
+          FROM crm_lead 
+          WHERE name LIKE '%Nano Growth Habit%' 
+          ORDER BY id DESC 
+          LIMIT 5
+        `);
+
+        let leadsSummary = "";
+        for (const l of recentLeadsRes.rows) {
+          leadsSummary += `  • Khách #${l.id}: ${l.contact_name || "Chưa rõ tên"} (SĐT: ${l.phone || "N/A"}) - ${cleanDescription(l.description)}\n`;
+        }
+
+        odooContext = [
+          `DỮ LIỆU THỰC TẾ ODOO ERP (Website: https://hnkt.vn/nano-growth-habit-ex):`,
+          `- Tổng số khách gửi thông tin: ${total} phụ huynh`,
+          `- Tổng doanh thu tạm tính: ${estRevenue.toLocaleString("vi-VN")} đ`,
+          `- Phân bổ gói đã chọn: 1 hộp (${box1} khách), 2 hộp (${box2} khách), 3 hộp (${box3} khách)`,
+          `- Các khách hàng đăng ký gần nhất:`,
+          leadsSummary || "  (Chưa có khách đăng ký mới)"
+        ].join("\n");
+      } finally {
+        client.release();
+      }
+    } catch (e) {
+      console.warn("Lỗi đọc dữ liệu context cho Gemini:", e.message);
+    }
+
+    const systemPrompt = [
+      `Bạn là "HNKT CEO AI" - Trợ lý thông minh cao cấp kiêm Giám đốc Vận hành cho sản phẩm Nano Growth Habit EX Nhật Bản (website: https://hnkt.vn/nano-growth-habit-ex).`,
+      `Bạn đang trò chuyện trực tiếp với anh CEO Huy qua Telegram.`,
+      ``,
+      `QUY TẮC GIAO TIẾP:`,
+      `- Luôn xưng "em" và gọi người dùng là "anh" (hoặc "anh Huy").`,
+      `- Giọng văn: Thân thiện, tôn trọng, chuyên nghiệp, sắc bén kinh doanh, ân cần và tự nhiên, dùng emoji hợp lý.`,
+      `- Trả lời ngắn gọn, rõ ràng, đi thẳng vào câu hỏi của anh. Định dạng tin nhắn đẹp mắt, dễ đọc trên điện thoại.`,
+      `- Dựa vào dữ liệu thực tế Odoo được cung cấp bên dưới để trả lời chính xác số liệu, thông tin khách hàng.`,
+      ``,
+      `THÔNG TIN SẢN PHẨM:`,
+      `- Nano Growth Habit EX: Canxi Tảo Đỏ sinh học kết hợp Bonepep & Vitamin D3/K2 Nhật Bản giúp trẻ 3-18 tuổi bứt phá chiều cao.`,
+      `- Gói 1: Trải nghiệm 1 hộp (1.250.000đ).`,
+      `- Gói 2: Chuẩn đột phá 2 hộp (2.350.000đ) - Tiết kiệm 150k.`,
+      `- Gói 3: Toàn diện dài hạn 3 hộp (3.390.000đ) - Tiết kiệm 360k.`,
+      ``,
+      `BỐI CẢNH DỮ LIỆU THỜI GIAN THỰC TỪ ODOO ERP:`,
+      odooContext
+    ].join("\n");
+
+    const payload = {
+      system_instruction: { parts: [{ text: systemPrompt }] },
+      contents: [{ role: "user", parts: [{ text: userText }] }],
+      generationConfig: {
+        temperature: 0.7,
+        maxOutputTokens: 1000
+      }
+    };
+
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${apiKey}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      const reply = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (reply) return reply.trim();
+    } else {
+      const errText = await res.text();
+      console.error("Gemini API Error:", errText);
+    }
+  } catch (err) {
+    console.error("Lỗi gọi Gemini AI:", err.message);
+  }
+  return null;
+}
+
 // Xử lý tin nhắn đến
 async function handleMessage(msg) {
   if (!msg || !msg.text) return;
@@ -199,27 +304,32 @@ async function handleMessage(msg) {
 
   console.log(`[INCOMING] Chat ID: ${chatId} | Message: ${text}`);
 
-  if (lower.startsWith("/start") || lower === "hi" || lower === "hello") {
+  if (lower === "/start") {
     const welcome = [
       `👋 <b>Xin chào ${msg.from?.first_name || "anh"}! Em là HNKT CEO AI Assistant.</b>`,
-      `Em được kết nối trực tiếp vào hệ thống Odoo ERP cho sản phẩm <b>Nano Growth Habit EX</b> tại web: https://hnkt.vn/nano-growth-habit-ex`,
+      `Em được tích hợp <b>Google Gemini AI</b> và kết nối trực tiếp vào hệ thống Odoo ERP cho sản phẩm <b>Nano Growth Habit EX</b> tại: https://hnkt.vn/nano-growth-habit-ex`,
       ``,
-      `📌 <b>CÁC LỆNH ANH CÓ THỂ DÙNG:</b>`,
-      `📊 <code>/stats</code> hoặc nhắn <code>báo cáo</code>: Xem tổng khách & tạm tính`,
-      `👥 <code>/leads</code> hoặc nhắn <code>khách mới</code>: Xem danh sách phụ huynh mới nhất`,
-      `🔍 <code>/find [sdt]</code>: Tra cứu phụ huynh theo số điện thoại`,
-      `❓ <code>/help</code>: Xem lại hướng dẫn này`,
+      `💬 <b>Anh có thể chat tự nhiên với em như một trợ lý thật:</b>`,
+      `• <i>"Hôm nay có ai đăng ký không em?"</i>`,
+      `• <i>"Tư vấn giúp anh mẹ có con 12 tuổi nên dùng gói nào?"</i>`,
+      `• <i>"Khách mới nhất tên gì, mua gói nào?"</i>`,
       ``,
-      `<i>💡 Chat ID của anh hiện tại là: <code>${chatId}</code></i>`
+      `📌 <b>HOẶC DÙNG CÁC LỆNH NHANH:</b>`,
+      `📊 <code>/stats</code>: Xem báo cáo doanh thu & khách`,
+      `👥 <code>/leads</code>: Xem danh sách phụ huynh mới nhất`,
+      `🔍 <code>/find [sdt]</code>: Tra cứu phụ huynh theo SĐT`,
+      ``,
+      `<i>💡 Chat ID của anh: <code>${chatId}</code></i>`
     ].join("\n");
     return await sendMessage(chatId, welcome);
   }
 
-  if (lower === "/stats" || lower.includes("báo cáo") || lower.includes("doanh thu") || lower.includes("thống kê")) {
+  // Các lệnh nhanh
+  if (lower === "/stats" || lower === "stats" || lower === "báo cáo" || lower === "doanh thu") {
     return await handleStats(chatId);
   }
 
-  if (lower === "/leads" || lower.includes("khách mới") || lower.includes("đơn hàng") || lower.includes("danh sách")) {
+  if (lower === "/leads" || lower === "leads" || lower === "khách mới" || lower === "danh sách") {
     return await handleLeads(chatId, 5);
   }
 
@@ -228,12 +338,19 @@ async function handleMessage(msg) {
     return await handleFind(chatId, query);
   }
 
-  // Nếu người dùng nhập thẳng số điện thoại
+  // Nhập thẳng số điện thoại
   if (/^0[0-9]{8,10}$/.test(text.replace(/\s+/g, ""))) {
     return await handleFind(chatId, text.replace(/\s+/g, ""));
   }
 
-  // Mặc định phản hồi hướng dẫn
+  // Gửi thông báo đang suy nghĩ nếu câu hỏi dài
+  // Gọi Gemini AI để xử lý ngôn ngữ tự nhiên
+  const aiReply = await askGemini(text);
+  if (aiReply) {
+    return await sendMessage(chatId, aiReply);
+  }
+
+  // Fallback nếu không có Gemini
   const helpMsg = [
     `🤖 Em đã nhận được tin nhắn: "<i>${text}</i>"`,
     `Để em hỗ trợ chính xác nhất, anh hãy dùng các lệnh sau nhé:`,
