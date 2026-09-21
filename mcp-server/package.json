@@ -1,0 +1,16 @@
+{
+  "name": "nano-mcp-server",
+  "version": "1.0.0",
+  "description": "MCP Server for Nano Canxi AI Agent",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.6.0",
+    "dotenv": "^16.4.7",
+    "nano-canxi-salepage": "file:..",
+    "zod": "^3.24.2"
+  }
+}
