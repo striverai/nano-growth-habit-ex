@@ -8,5 +8,14 @@ extracted_copywriting.txt
 *.backup
 *.db.backup
 brain_backup_*.db
+brain.db
+*.db
+*.db-shm
+*.db-wal
 resend_config.txt
+tools/
+node_modules/
+npm-debug.log*
+
+
 

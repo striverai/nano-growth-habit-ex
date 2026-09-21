@@ -19,9 +19,8 @@ module.exports = (req, res) => {
     return res.status(400).json({ error: 'Missing required fields: to, subject, content' });
   }
 
-  const defaultKey = Buffer.from('cmVfUVVzVGN1MWFfREJaeDE3eWRpc3Q0SksyTTc0NkIxMldU', 'base64').toString('utf-8');
-  const RESEND_API_KEY = process.env.RESEND_API_KEY || defaultKey;
-  const SENDER = from || 'Nano Growth EX <cskh@hnkt.vn>';
+  const RESEND_API_KEY = process.env.RESEND_API_KEY;
+  const SENDER = from || process.env.EMAIL_SENDER || 'Nano Growth EX <cskh@hnkt.vn>';
 
   const payload = JSON.stringify({
     from: SENDER,

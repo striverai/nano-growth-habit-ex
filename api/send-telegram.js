@@ -1,7 +1,7 @@
 const https = require('https');
 
-const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '7966144550:AAEUt6ystZCBFMrZUBXS7lJII6RZjZDNTTY';
-const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID || '-1004414191458';
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
