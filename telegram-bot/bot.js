@@ -244,10 +244,83 @@ async function handleMessage(msg) {
   await sendMessage(chatId, helpMsg);
 }
 
+// ─────────────────────────────────────────────────────────────
+// TÍNH NĂNG BÁO ĐỘNG LEAD MỚI TỰ ĐỘNG (REALTIME LEAD ALERT)
+// ─────────────────────────────────────────────────────────────
+let lastSeenLeadId = null;
+
+async function checkNewLeads() {
+  try {
+    const client = await pool.connect();
+    try {
+      if (lastSeenLeadId === null) {
+        const maxRes = await client.query(`
+          SELECT MAX(id) AS max_id 
+          FROM crm_lead 
+          WHERE name LIKE '%Nano Growth Habit%'
+        `);
+        lastSeenLeadId = parseInt(maxRes.rows[0]?.max_id || 0, 10);
+        console.log(`[LEAD WATCHER] Khởi tạo theo dõi lead từ ID: ${lastSeenLeadId}`);
+        return;
+      }
+
+      const newLeadsRes = await client.query(`
+        SELECT id, contact_name, phone, create_date, description 
+        FROM crm_lead 
+        WHERE name LIKE '%Nano Growth Habit%' AND id > $1 
+        ORDER BY id ASC
+      `, [lastSeenLeadId]);
+
+      for (const lead of newLeadsRes.rows) {
+        lastSeenLeadId = Math.max(lastSeenLeadId, lead.id);
+        const desc = cleanDescription(lead.description);
+        const dateStr = lead.create_date 
+          ? new Date(lead.create_date).toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" }) 
+          : "Vừa xong";
+
+        const alertMsg = [
+          `🔔 <b>CÓ KHÁCH HÀNG MỚI ĐĂNG KÝ TƯ VẤN!</b>`,
+          `🌐 <i>Từ website: https://hnkt.vn/nano-growth-habit-ex</i>`,
+          `─────────────────────`,
+          `👤 <b>Phụ huynh:</b> ${lead.contact_name || "Chưa có tên"}`,
+          `📞 <b>Số điện thoại:</b> <code>${lead.phone || "N/A"}</code>`,
+          `🕒 <b>Thời gian gửi:</b> ${dateStr}`,
+          `─────────────────────`,
+          `📝 <b>Chi tiết nhu cầu:</b>`,
+          `${desc}`,
+          `─────────────────────`,
+          `⚡ <i>Hãy gọi tư vấn hoặc kết bạn Zalo ngay nhé!</i>`
+        ].join("\n");
+
+        // Gửi thông báo đến Admin
+        const targetChats = new Set();
+        if (process.env.ADMIN_CHAT_ID) targetChats.add(process.env.ADMIN_CHAT_ID);
+        if (process.env.TELEGRAM_CHAT_ID) targetChats.add(process.env.TELEGRAM_CHAT_ID);
+        targetChats.add("5781808621"); // Chat ID của anh
+
+        for (const targetId of targetChats) {
+          console.log(`[LEAD ALERT] Gửi thông báo lead #${lead.id} đến Chat ID: ${targetId}`);
+          await sendMessage(targetId, alertMsg);
+        }
+      }
+    } finally {
+      client.release();
+    }
+  } catch (err) {
+    console.error("Lỗi kiểm tra lead mới:", err.message);
+  }
+}
+
+// Kiểm tra lead mới mỗi 5 giây
+setInterval(checkNewLeads, 5000);
+
 // Vòng lặp Long Polling nhận tin nhắn Telegram
 let lastUpdateId = 0;
 
 async function poll() {
+  // Chạy kiểm tra lead lần đầu
+  await checkNewLeads();
+
   while (true) {
     try {
       const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getUpdates?offset=${lastUpdateId + 1}&timeout=30`);
@@ -269,5 +342,6 @@ async function poll() {
   }
 }
 
-console.log("🚀 HNKT CEO AI Telegram Bot is starting...");
+console.log("🚀 HNKT CEO AI Telegram Bot is starting with Realtime Lead Alert...");
 poll();
+
