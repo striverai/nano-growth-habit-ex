@@ -305,6 +305,109 @@ function createMcpServer() {
     }
   );
 
+  // ─────────────────────────────────────────────────────────────
+  // TOOL 6: get_business_signals - Đọc tín hiệu đơn mới, lead mới & báo cáo sáng
+  // ─────────────────────────────────────────────────────────────
+  server.tool(
+    "get_business_signals",
+    "Quét các tín hiệu kinh doanh mới (đơn hàng mới, lead mới) chưa gửi thông báo và tổng hợp số liệu báo cáo sáng cho chủ doanh nghiệp.",
+    {
+      mark_as_read: z.boolean().optional().default(true).describe("Đánh dấu các đơn và lead này là đã thông báo (notified=1) để không gửi trùng"),
+      include_daily_report: z.boolean().optional().default(false).describe("Bật chế độ kèm báo cáo tổng quan kinh doanh (doanh thu, đơn hàng) phục vụ báo cáo sáng")
+    },
+    async ({ mark_as_read = true, include_daily_report = false }) => {
+      const timestamp = new Date().toISOString();
+      console.log(`[${timestamp}] [MCP CALL] get_business_signals: mark_as_read=${mark_as_read}, include_daily_report=${include_daily_report}`);
+      try {
+        const database = getDb();
+
+        // 1. Quét đơn hàng mới (notified = 0)
+        const newOrders = database.prepare(`
+          SELECT o.id, o.quantity, o.amount, o.status, o.payment_code, o.ordered_at, o.note,
+                 c.name AS customer_name, c.phone AS customer_phone,
+                 p.name AS product_name
+          FROM orders o
+          LEFT JOIN customers c ON o.customer_id = c.id
+          LEFT JOIN products p ON o.product_id = p.id
+          WHERE o.notified = 0
+          ORDER BY o.id ASC
+        `).all();
+
+        // 2. Quét khách hàng/lead mới (notified = 0)
+        const newLeads = database.prepare(`
+          SELECT id, name, phone, email, zalo, note, registered_at
+          FROM customers
+          WHERE notified = 0
+          ORDER BY id ASC
+        `).all();
+
+        // 3. Đánh dấu đã đọc nếu mark_as_read = true
+        if (mark_as_read) {
+          if (newOrders.length > 0) {
+            const orderIds = newOrders.map((o) => o.id);
+            database.prepare(`UPDATE orders SET notified = 1 WHERE id IN (${orderIds.map(() => '?').join(',')})`).run(...orderIds);
+          }
+          if (newLeads.length > 0) {
+            const leadIds = newLeads.map((l) => l.id);
+            database.prepare(`UPDATE customers SET notified = 1 WHERE id IN (${leadIds.map(() => '?').join(',')})`).run(...leadIds);
+          }
+        }
+
+        const hasSignals = newOrders.length > 0 || newLeads.length > 0;
+        const sections = [];
+
+        // Soạn nội dung thông báo
+        if (hasSignals) {
+          sections.push("🔔 TÍN HIỆU KINH DOANH MỚI CẦN XỬ LÝ:");
+
+          if (newOrders.length > 0) {
+            sections.push(`\n📦 ĐƠN HÀNG MỚI (${newOrders.length} đơn):`);
+            for (const o of newOrders) {
+              sections.push(`  • Đơn #${o.id} - ${Number(o.amount).toLocaleString("vi-VN")}đ: ${o.customer_name || "Khách"} (${o.customer_phone || "N/A"}) - ${o.product_name || "Sản phẩm"} x${o.quantity} [${o.status.toUpperCase()}]`);
+            }
+          }
+
+          if (newLeads.length > 0) {
+            sections.push(`\n👤 KHÁCH HÀNG / LEAD MỚI (${newLeads.length} khách):`);
+            for (const l of newLeads) {
+              sections.push(`  • Lead #${l.id}: ${l.name || "Khách mới"} - SĐT: ${l.phone || "Chưa có"} | Email: ${l.email || "N/A"} (${l.registered_at || "Vừa đăng ký"})`);
+            }
+          }
+        } else if (!include_daily_report) {
+          sections.push("✨ Hiện tại không có đơn hàng hay lead mới nào chưa xử lý.");
+        }
+
+        // Báo cáo sáng nếu được yêu cầu
+        if (include_daily_report) {
+          const totalRevenue = database.prepare("SELECT SUM(amount) AS total FROM orders WHERE status = 'success'").get()?.total || 0;
+          const totalOrders = database.prepare("SELECT COUNT(*) AS count FROM orders").get()?.count || 0;
+          const successOrders = database.prepare("SELECT COUNT(*) AS count FROM orders WHERE status = 'success'").get()?.count || 0;
+          const pendingOrders = database.prepare("SELECT COUNT(*) AS count FROM orders WHERE status = 'pending'").get()?.count || 0;
+          const totalCustomers = database.prepare("SELECT COUNT(*) AS count FROM customers").get()?.count || 0;
+
+          sections.push(`\n☀️ BÁO CÁO SÁNG DOANH THU & HOẠT ĐỘNG:`);
+          sections.push(`- Doanh thu thực nhận: ${Number(totalRevenue).toLocaleString("vi-VN")} đ`);
+          sections.push(`- Tổng số đơn: ${totalOrders} (Thành công: ${successOrders} | Đang chờ: ${pendingOrders})`);
+          sections.push(`- Tổng số khách/leads trong hệ thống: ${totalCustomers} khách`);
+        }
+
+        const summaryText = sections.join("\n");
+
+        return {
+          content: [{
+            type: "text",
+            text: summaryText
+          }]
+        };
+      } catch (err) {
+        return {
+          content: [{ type: "text", text: `❌ Lỗi quét tín hiệu: ${err.message}` }],
+          isError: true
+        };
+      }
+    }
+  );
+
   return server;
 }
 
