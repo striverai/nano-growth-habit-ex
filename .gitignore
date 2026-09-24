@@ -16,6 +16,10 @@ resend_config.txt
 tools/
 node_modules/
 npm-debug.log*
+__pycache__/
+*.pyc
+output/
+my-skills/**/output/
 
 
 
