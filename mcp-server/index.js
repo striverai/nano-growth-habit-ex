@@ -408,6 +408,96 @@ function createMcpServer() {
     }
   );
 
+  // ─────────────────────────────────────────────────────────────
+  // TOOL 7: publish_facebook_post - Đăng đồng thời CẢ ẢNH & CAPTION lên Page
+  // ─────────────────────────────────────────────────────────────
+  server.tool(
+    "publish_facebook_post",
+    "Đăng bài viết và ảnh đồng thời lên Facebook Fanpage Nano Growth qua Facebook Graph API /{page_id}/photos.",
+    {
+      caption: z.string().describe("Nội dung bài viết / caption cần đăng"),
+      image_path: z.string().optional().describe("Đường dẫn file ảnh local trên server hoặc URL ảnh online")
+    },
+    async ({ caption, image_path }) => {
+      const timestamp = new Date().toISOString();
+      console.log(`[${timestamp}] [MCP CALL] publish_facebook_post: length=${caption?.length}, image=${image_path}`);
+      try {
+        const pageId = process.env.FB_PAGE_ID;
+        const pageToken = process.env.FB_PAGE_TOKEN;
+
+        if (!pageId || !pageToken) {
+          return {
+            content: [{ type: "text", text: "❌ Thiếu cấu hình FB_PAGE_ID hoặc FB_PAGE_TOKEN trong .env!" }],
+            isError: true
+          };
+        }
+
+        // Tự động tìm ảnh nếu không cung cấp
+        let targetImg = image_path;
+        if (!targetImg) {
+          const defaultCandidates = [
+            path.resolve(__dirname, "../my-skills/tao-creative-fb/output/organic_post/post_organic_idea_3.png"),
+            path.resolve(__dirname, "../my-skills/tao-creative-fb/output/organic_post/post_organic_idea_1.png"),
+            path.resolve(__dirname, "../my-skills/tao-creative-fb/output/creative_ads/ad_set_1_pain_point.png"),
+            path.resolve(__dirname, "../Ảnh sản phẩm/2026.04.16 GH 5.png")
+          ];
+          for (const cand of defaultCandidates) {
+            if (fs.existsSync(cand)) {
+              targetImg = cand;
+              break;
+            }
+          }
+        }
+
+        const apiUrl = `https://graph.facebook.com/v19.0/${pageId}/photos`;
+        const formData = new FormData();
+        formData.append("caption", caption);
+        formData.append("access_token", pageToken);
+
+        if (targetImg && (targetImg.startsWith("http://") || targetImg.startsWith("https://"))) {
+          formData.append("url", targetImg);
+        } else if (targetImg && fs.existsSync(targetImg)) {
+          const fileBuffer = fs.readFileSync(targetImg);
+          const blob = new Blob([fileBuffer], { type: "image/png" });
+          formData.append("source", blob, path.basename(targetImg));
+        } else {
+          return {
+            content: [{ type: "text", text: `❌ Không tìm thấy file ảnh để đăng: ${targetImg || "Không có ảnh"}` }],
+            isError: true
+          };
+        }
+
+        const res = await fetch(apiUrl, {
+          method: "POST",
+          body: formData
+        });
+
+        const resData = await res.json();
+        if (res.ok && resData.id) {
+          const photoId = resData.id;
+          const postId = resData.post_id || `${pageId}_${photoId}`;
+          return {
+            content: [{
+              type: "text",
+              text: `🎉 ĐÃ ĐĂNG BÀI LÊN FACEBOOK FANPAGE THÀNH CÔNG!\n\n🆔 Photo ID: ${photoId}\n📌 Post ID: ${postId}\n🔗 Xem bài đăng: https://facebook.com/${postId}`
+            }]
+          };
+        } else {
+          const errMsg = resData.error?.message || "Lỗi không xác định từ Meta API";
+          return {
+            content: [{ type: "text", text: `❌ Facebook Graph API báo lỗi: ${errMsg}` }],
+            isError: true
+          };
+        }
+      } catch (err) {
+        return {
+          content: [{ type: "text", text: `❌ Lỗi khi đăng bài Facebook: ${err.message}` }],
+          isError: true
+        };
+      }
+    }
+  );
+
   return server;
 }
 
