@@ -24,6 +24,8 @@ sys.path.insert(0, str(SCRIPT_DIR))
 from gen_image import generate_image
 from gen_caption import generate_caption
 from post_facebook import post_to_facebook
+from get_weekly_video_topic import get_topic_for_today
+from post_omnichannel import publish_omnichannel_video
 
 # Danh sách 3 ý tưởng chuẩn cho Mode 1
 ORGANIC_IDEAS = [
@@ -210,18 +212,151 @@ def execute_mode_1_organic(chosen_idea_id: int = 1, dry_run: bool = True, output
     }
 
 
+def execute_mode_3_video(topic_override: str = None, day: str = None, dry_run: bool = True, publish: bool = False, output_dir: str = "output/video_reels") -> dict:
+    """
+    MODE 3: Video AI Đa Kênh (Facebook Reels, TikTok, YouTube Shorts).
+    Bước 1: Đọc content plan tuần này, chọn 1 topic phù hợp video
+    Bước 2: Gọi skill tao-video-ai -> kết xuất file MP4 15-25s chuẩn tỷ lệ 9:16
+    Bước 3: Hiển thị preview chi tiết cho Telegram
+    Bước 4: Nếu publish=True (User duyệt OK) -> xuất bản lên 3 nền tảng
+    Bước 5: Trả về link 3 bài đăng
+    """
+    out_path = Path(output_dir)
+    out_path.mkdir(parents=True, exist_ok=True)
+
+    print("\n" + "="*80)
+    print("🎬 BƯỚC 1: ĐỌC CONTENT PLAN TUẦN NÀY & CHỌN TOPIC VIDEO PHÙ HỢP")
+    print("="*80)
+    topic_info = get_topic_for_today(day)
+    topic_title = topic_override if topic_override else topic_info["topic"]
+    style = topic_info.get("style", "luxury")
+    hook = topic_info.get("hook", "")
+    print(f"📌 Lịch phát sóng : {topic_info.get('day_name', 'Hôm nay')} (Tần suất: 2 video/tuần)")
+    print(f"🎯 Trụ cột nội dung: {topic_info.get('pillar', 'Giáo dục / Chuyên sâu')}")
+    print(f"💡 Topic được chọn : {topic_title}")
+    print(f"🎨 Visual Style    : {style.upper()}")
+    print(f"⚡ Hook 3s đầu     : \"{hook}\"")
+
+    # Bước 2: Gọi skill tao-video-ai
+    print("\n" + "="*80)
+    print("🎥 BƯỚC 2: GỌI SKILL tao-video-ai ĐỂ SINH PROMPT & RENDER VIDEO 15-25S...")
+    print("="*80)
+
+    # Tìm đường dẫn skill tao-video-ai
+    skills_root = Path(__file__).resolve().parent.parent.parent
+    tao_video_dir = skills_root / "tao-video-ai"
+    if not tao_video_dir.exists():
+        tao_video_dir = skills_root / "skills" / "tao-video-ai"
+
+    # Gọi gen-prompt.py
+    print("   [1/2] Đang sinh kịch bản 4 phân cảnh camera motion chuẩn Stream 4.5...")
+    storyboard_json = out_path / "storyboard_video.json"
+    gen_script = tao_video_dir / "scripts" / "gen-prompt.py"
+    cmd_prompt = [
+        sys.executable, str(gen_script),
+        "--topic", topic_title,
+        "--style", style,
+        "--duration", "20",
+        "--output", str(storyboard_json)
+    ]
+    import subprocess
+    subprocess.run(cmd_prompt, check=True)
+
+    # Gọi upload-higgsfield.py để render file MP4
+    print("   [2/2] Đang kích hoạt Autonomous Engine để render MP4 (1080x1920 9:16)...")
+    video_mp4 = out_path / "video_reels_published_20s.mp4"
+    render_script = tao_video_dir / "scripts" / "upload-higgsfield.py"
+    
+    # Tìm ảnh sản phẩm tham chiếu
+    photos_dir = tao_video_dir / "product-photos"
+    prod_imgs = list(photos_dir.glob("*.png")) + list(photos_dir.glob("*.jpg"))
+    hero_img = prod_imgs[0] if prod_imgs else None
+
+    cmd_render = [
+        sys.executable, str(render_script),
+        "--storyboard", str(storyboard_json),
+        "--output", str(video_mp4),
+        "--render"
+    ]
+    if hero_img:
+        cmd_render.extend(["--image", str(hero_img)])
+
+    subprocess.run(cmd_render, check=True)
+
+    # Chuẩn bị nội dung caption đính kèm
+    caption_text = (
+        f"{topic_title}\n\n"
+        "Canxi chỉ là gạch vữa, Hormone GH mới là thợ xây!\n"
+        "Đột phá Alpha-GPC kích hoạt GH tự nhiên ban đêm + Canxi nano vỏ trứng & CPP êm bụng không lo lắng cặn.\n"
+        "2 viên nhai vị cacao thơm ngon con tự giác mỗi tối trước khi ngủ 30 phút.\n\n"
+        "Nhắn tin ngay để nhận lộ trình phát triển chiều cao chuẩn Nhật Bản cho con!\n"
+        "Thực phẩm này không phải là thuốc và không có tác dụng thay thế thuốc chữa bệnh.\n\n"
+        "#NanoGrowth #TangChieuCao #CanxiNano #AlphaGPC #Reels #Shorts #TikTokShop"
+    )
+    caption_file = out_path / "video_caption.txt"
+    with open(caption_file, "w", encoding="utf-8") as f:
+        f.write(caption_text)
+
+    # Bước 3: Gửi Preview Telegram
+    print("\n" + "="*80)
+    print("📱 BƯỚC 3: PREVIEW NỘI DUNG VIDEO ĐỂ DUYỆT (TELEGRAM PREVIEW PACKAGE)")
+    print("="*80)
+    print(f"🎬 File Video MP4: {video_mp4.resolve()}")
+    print(f"📏 Độ phân giải   : 1080 x 1920 (Chuẩn tỷ lệ 9:16 TikTok / Reels / Shorts)")
+    print(f"⏱️ Thời lượng     : 20 giây (Hòa âm ambient chime)")
+    print(f"📝 Caption đính kèm:")
+    print("------------------------------------------------------------------")
+    print(caption_text[:280] + "...")
+    print("------------------------------------------------------------------")
+    print("💡 Trạng thái duyệt: Đã sẵn sàng. Nhắn 'OK' hoặc 'Duyệt' để xuất bản lên 3 kênh!")
+
+    # Bước 4 & 5: Xuất bản nếu được duyệt
+    publish_result = None
+    if publish:
+        print("\n" + "="*80)
+        print("🚀 BƯỚC 4 & 5: TIẾN HÀNH XUẤT BẢN ĐA KÊNH (REELS + TIKTOK + YOUTUBE SHORTS)")
+        print("="*80)
+        publish_result = publish_omnichannel_video(
+            video_path=str(video_mp4),
+            title=topic_title,
+            caption=caption_text,
+            dry_run=dry_run
+        )
+
+    return {
+        "topic": topic_title,
+        "video_file": str(video_mp4),
+        "caption_file": str(caption_file),
+        "caption_text": caption_text,
+        "storyboard_file": str(storyboard_json),
+        "published": publish,
+        "publish_result": publish_result
+    }
+
+
 def main():
-    parser = argparse.ArgumentParser(description="Điều phối tạo content Facebook cho Nano Growth Habit EX")
-    parser.add_argument("--mode", type=str, default="ads", choices=["organic", "ads"], help="Chế độ chạy: organic (Mode 1) hoặc ads (Mode 2)")
+    parser = argparse.ArgumentParser(description="Điều phối tạo content Facebook & Video Đa Kênh cho Nano Growth Habit EX")
+    parser.add_argument("--mode", type=str, default="ads", choices=["organic", "ads", "video"], help="Chế độ chạy: organic (Mode 1), ads (Mode 2), video (Mode 3)")
     parser.add_argument("--idea", type=int, default=1, choices=[1, 2, 3], help="ID ý tưởng cho Mode 1 (1, 2, hoặc 3)")
-    parser.add_argument("--dry-run", action="store_true", default=True, help="Chạy ở chế độ kiểm thử giả lập")
+    parser.add_argument("--topic", type=str, default=None, help="Chủ đề tùy chỉnh cho Mode video")
+    parser.add_argument("--day", type=str, default=None, choices=["tuesday", "friday"], help="Chỉ định slot Thứ 3 hoặc Thứ 6")
+    parser.add_argument("--publish", action="store_true", default=False, help="Thực hiện đăng ngay lên 3 kênh sau khi tạo")
+    parser.add_argument("--dry-run", action="store_true", default=False, help="Chạy ở chế độ kiểm thử giả lập an toàn")
     args = parser.parse_args()
 
     if args.mode == "ads":
         execute_mode_2_ads()
+    elif args.mode == "video":
+        execute_mode_3_video(
+            topic_override=args.topic,
+            day=args.day,
+            dry_run=args.dry_run,
+            publish=args.publish
+        )
     else:
         execute_mode_1_organic(chosen_idea_id=args.idea, dry_run=args.dry_run)
 
 
 if __name__ == "__main__":
     main()
+
